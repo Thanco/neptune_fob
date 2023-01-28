@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'package:socket_io_client/socket_io_client.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,6 +13,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'address_prompt.dart';
 import 'username_prompt.dart';
 import 'chat_item.dart';
+import 'image_view.dart';
+import 'adjustable_scroll_controller.dart';
 // import 'chat_message.dart';
 // import 'image_message.dart';
 
@@ -82,7 +85,7 @@ class _MainChatState extends State<_MainChat> {
 
   final TextEditingController _userNameController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
-  final ScrollController _scroller = ScrollController();
+  final ScrollController _scroller = AdjustableScrollController(20);
 
   final List<String> _typingList = [];
   final Stopwatch _sentTypingPing = Stopwatch();
@@ -408,6 +411,17 @@ class _MainChatState extends State<_MainChat> {
     }
   }
 
+  void _pushImage(Image image) async {
+    await Navigator.of(context).push(
+      DialogRoute<void>(
+        context: context,
+        builder: (BuildContext context) => ImageView(
+          image: image,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -699,8 +713,8 @@ class _MainChatState extends State<_MainChat> {
                       child: ListView.separated(
                         clipBehavior: Clip.none,
                         controller: _scroller,
+                        // physics: const BouncingScrollPhysics(),
                         padding: const EdgeInsets.symmetric(),
-                        scrollDirection: Axis.vertical,
                         shrinkWrap: true,
                         itemCount: _messageList.length,
                         itemBuilder: ((context, index) {
@@ -835,13 +849,19 @@ class _MainChatState extends State<_MainChat> {
                                     constraints: BoxConstraints(
                                       maxWidth:
                                           MediaQuery.of(context).size.width *
-                                              0.5,
+                                              0.8,
                                       maxHeight:
                                           MediaQuery.of(context).size.height *
-                                              0.6,
+                                              0.4,
                                     ),
-                                    child: Image.memory(
-                                      _messageList[index].content,
+                                    child: MaterialButton(
+                                      onPressed: () => _pushImage(
+                                        Image.memory(
+                                            _messageList[index].content),
+                                      ),
+                                      child: Image.memory(
+                                        _messageList[index].content,
+                                      ),
                                     ),
                                   ),
                                 ),

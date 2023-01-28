@@ -1,5 +1,3 @@
-import 'main.dart';
-
 class ChatItem extends Comparable<ChatItem> {
   final int itemIndex;
   final String userName;
