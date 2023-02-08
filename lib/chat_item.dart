@@ -24,8 +24,13 @@ class ChatItem extends Comparable<ChatItem> {
         'type': type,
       };
 
+  // @override
+  // int compareTo(ChatItem other) {
+  //   return itemIndex - other.itemIndex;
+  // }
+
   @override
   int compareTo(ChatItem other) {
-    return itemIndex - other.itemIndex;
+    return other.itemIndex - itemIndex;
   }
 }

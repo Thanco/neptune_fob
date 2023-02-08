@@ -93,8 +93,6 @@ class _MainChatState extends State<_MainChat> {
   late String _font = '';
   late double _fontSize = 22;
 
-  bool _newMessage = false;
-
   bool _newClient = true;
   late Socket socket;
   String _userName = '';
@@ -162,7 +160,18 @@ class _MainChatState extends State<_MainChat> {
 
     _sentTypingPing.start();
 
+    _scroller.addListener(() => _scrollActions());
+
     super.initState();
+  }
+
+  void _scrollActions() {
+    if (_scroller.position.pixels == _scroller.position.minScrollExtent) {
+      WidgetsBinding.instance.addPostFrameCallback((data) => _scrollToEnd());
+    } else if (_scroller.position.pixels ==
+        _scroller.position.maxScrollExtent) {
+      _requestMore();
+    }
   }
 
   void _initSettings() async {
@@ -261,7 +270,6 @@ class _MainChatState extends State<_MainChat> {
     if (item.userName != _userName) {
       SystemSound.play(SystemSoundType.alert);
     }
-    _newMessage = true;
   }
 
   void _sendImage(File image) async {
@@ -293,7 +301,7 @@ class _MainChatState extends State<_MainChat> {
   }
 
   void _scrollToEnd() async {
-    await _scroller.animateTo(_scroller.position.maxScrollExtent,
+    await _scroller.animateTo(_scroller.position.minScrollExtent,
         duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
   }
 
@@ -422,6 +430,10 @@ class _MainChatState extends State<_MainChat> {
     );
   }
 
+  void _requestMore() async {
+    socket.emit('messageRequest', _messageList.last.itemIndex);
+  }
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -432,10 +444,6 @@ class _MainChatState extends State<_MainChat> {
     // than having to individually change instances of widgets.
 
     _userDisconnect(_userName);
-
-    if (_newMessage) {
-      WidgetsBinding.instance.addPostFrameCallback((data) => _scrollToEnd());
-    }
 
     if (_newClient) {
       WidgetsBinding.instance.addPostFrameCallback((data) => _newClientCalls());
@@ -713,6 +721,7 @@ class _MainChatState extends State<_MainChat> {
                       child: ListView.separated(
                         clipBehavior: Clip.none,
                         controller: _scroller,
+                        reverse: true,
                         // physics: const BouncingScrollPhysics(),
                         padding: const EdgeInsets.symmetric(),
                         shrinkWrap: true,
@@ -864,6 +873,13 @@ class _MainChatState extends State<_MainChat> {
                                       ),
                                     ),
                                   ),
+                                ),
+                              );
+                              break;
+                            case 'b':
+                              newRow.children.add(
+                                MaterialButton(
+                                  onPressed: () => _requestMore(),
                                 ),
                               );
                               break;
