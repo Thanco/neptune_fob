@@ -1,22 +1,20 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:biometric_storage/biometric_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:pasteboard/pasteboard.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:socket_io_client/socket_io_client.dart';
-
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:url_launcher/url_launcher.dart';
 
-import 'address_prompt.dart';
-import 'username_prompt.dart';
+import 'input_prompt.dart';
 import 'chat_item.dart';
 import 'image_view.dart';
-import 'adjustable_scroll_controller.dart';
-// import 'chat_message.dart';
-// import 'image_message.dart';
 
 void main() {
   runApp(const NeptuneFOB());
@@ -25,67 +23,39 @@ void main() {
 class NeptuneFOB extends StatelessWidget {
   const NeptuneFOB({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Project Neptune FOB',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        // primarySwatch: const MaterialColor(0x4463B3, {0x4463B3: Colors.blue}),
-        // primaryColor: const Color.fromARGB(255, 68, 99, 179),
-        // primaryColorDark: Colors.blueGrey,
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color.fromARGB(255, 68, 99, 179),
-          // primary: const Color.fromARGB(255, 68, 99, 179),
-          // onPrimary: const Color.fromARGB(255, 68, 99, 179),
           brightness: Brightness.dark,
         ),
         fontFamily: 'CenturyGothic',
       ),
-      home: const _MainChat(title: 'Project Neptune FOB'),
+      home: const _MainChat(),
     );
   }
 }
 
 class _MainChat extends StatefulWidget {
-  const _MainChat({required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+  const _MainChat();
 
   @override
   State<_MainChat> createState() => _MainChatState();
 }
 
 class _MainChatState extends State<_MainChat> {
-  final Future<SharedPreferences> _settings = SharedPreferences.getInstance();
-
-  final List<ChatItem> _messageList = [];
+  final List<Widget> _editBtns = [];
+  final Map<String, List<ChatItem>> _messageLists = {'Default': []};
+  String _currentChannel = 'Default';
   final List<String> _userList = [];
   List<String> _serverList = [];
-  List<DropdownMenuItem> _serverItemList = [];
+  List<DropdownMenuItem<String>> _serverItemList = [];
   final TextEditingController _controller = TextEditingController();
 
-  final TextEditingController _userNameController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
-  final ScrollController _scroller = AdjustableScrollController(20);
+  final ScrollController _scroller = ScrollController();
 
   final List<String> _typingList = [];
   final Stopwatch _sentTypingPing = Stopwatch();
@@ -97,41 +67,45 @@ class _MainChatState extends State<_MainChat> {
   late Socket socket;
   String _userName = '';
 
+  bool _showServerPanel = false;
   bool _showUserPanel = false;
 
-  late Widget _userPanel;
-  final Widget _closedUserPanel = const SizedBox();
+  late Uint8List? _imageBytes;
+  bool _imagePaste = false;
 
   final Color _neptuneColor = const Color.fromARGB(255, 68, 99, 179);
 
+  int _editIndex = -1;
+  final TextEditingController _editingController = TextEditingController();
+
   @override
   void initState() {
-    _initSettings();
-
     socket = io(
       '',
       OptionBuilder()
           .setTransports(['websocket'])
-          .setExtraHeaders({
-            "maxHttpBufferSize": 50000000,
-            "pingTimeout": 600000,
-          })
+          // .setExtraHeaders({
+          //   "maxHttpBufferSize": 50000000,
+          //   "pingTimeout": 600000,
+          // })
           .disableAutoConnect()
           .build(),
     );
 
+    _initSettings();
+
     socket.onConnect((data) {
+      _currentChannel = 'Default';
       if (_userName != '') {
         socket.emit('usernameSet', _userName);
-        _messageList.clear();
+        _messageLists.clear();
         _userList.clear();
       }
     });
-
-    socket.onConnectError((error) =>
-        _messageList.add(ChatItem(-1, 'System', 't', 'Error! $error')));
-    socket.onConnectTimeout((data) => _messageList.add(ChatItem(
-        -1, 'System', 't', 'Im going to stop trying now :) (timeout)')));
+    socket.onConnectError((error) => _messageLists['Default']!
+        .add(ChatItem(-1, 'System', 'Default', 't', 'Error! $error')));
+    socket.onConnectTimeout((data) => _messageLists['Default']!.add(ChatItem(-1,
+        'System', 'Default', 't', 'Im going to stop trying now :) (timeout)')));
     socket.on(
       'chatMessage',
       (message) {
@@ -140,6 +114,10 @@ class _MainChatState extends State<_MainChat> {
         _userNoLongerTyping(newMessage.userName);
       },
     );
+    socket.on('backlogFill', (itemJson) {
+      ChatItem backlogMessage = ChatItem.fromJson(itemJson);
+      _backlogFill(backlogMessage);
+    });
     socket.on('image', (imageMessage) {
       ChatItem newImage = ChatItem.fromJson(imageMessage.first);
       _addChatItem(newImage);
@@ -147,16 +125,33 @@ class _MainChatState extends State<_MainChat> {
       // ack response
       imageMessage.last(null);
     });
+    socket.on('backlogImage', (imageMessage) {
+      ChatItem newImage = ChatItem.fromJson(imageMessage.first);
+      _backlogFill(newImage);
+
+      // ack response
+      imageMessage.last(null);
+    });
     socket.on('usernameSend', (userName) {
       _userName = userName;
       _addServer();
-      _saveUsername();
     });
     socket.on('userListSend',
         (userList) => _userList.addAll(userList.cast<String>()));
     socket.on('userJoin', (userName) => _userConnect(userName));
     socket.on('userLeave', (userName) => _userDisconnect(userName));
-    socket.on('userTyping', (userName) => _userIsTyping(userName));
+    socket.on('userTyping', (itemJson) {
+      ChatItem item = ChatItem.fromJson(itemJson);
+      _userIsTyping(item);
+    });
+    socket.on('edit', (itemJson) {
+      ChatItem editItem = ChatItem.fromJson(itemJson);
+      _editItem(editItem);
+    });
+    socket.on('delete', (itemJson) {
+      ChatItem deleteItem = ChatItem.fromJson(itemJson);
+      _deleteItem(deleteItem);
+    });
 
     _sentTypingPing.start();
 
@@ -166,63 +161,72 @@ class _MainChatState extends State<_MainChat> {
   }
 
   void _scrollActions() {
-    if (_scroller.position.pixels == _scroller.position.minScrollExtent) {
-      WidgetsBinding.instance.addPostFrameCallback((data) => _scrollToEnd());
-    } else if (_scroller.position.pixels ==
-        _scroller.position.maxScrollExtent) {
+    if (_scroller.position.pixels == _scroller.position.maxScrollExtent) {
       _requestMore();
     }
   }
 
   void _initSettings() async {
-    final SharedPreferences settings = await _settings;
+    bool loadCheck = await _loadSettings();
+    if (loadCheck) {
+      setState(() {});
+      return;
+    }
     setState(() {
-      _addressController.text = settings.getString('address') ?? '';
-      if (_addressController.text.isNotEmpty) {
-        socket.io.uri = _addressController.text;
-      }
-      if (socket.disconnected && socket.io.uri.isNotEmpty) {
-        socket.connect();
-      }
-      _serverList = settings.getStringList('serverList') ?? [];
-      _setServerItems();
-      _userName = settings.getString('userName') ?? '';
-      _font = settings.getString('font') ?? 'CenturyGothic';
-      _fontSize = settings.getDouble('fontSize') ?? 22;
+      _newClientCalls();
     });
   }
 
+  Future<bool> _loadSettings() async {
+    try {
+      BiometricStorageFile settingsStore =
+          await BiometricStorage().getStorage('thancoHostNeptuneSettings');
+      String? settingsJson = await settingsStore.read();
+      Map settings = jsonDecode(settingsJson!);
+      socket.io.uri = settings['currentServer'];
+      if (socket.disconnected && socket.io.uri.isNotEmpty) {
+        socket.connect();
+      }
+      _userName = settings['username'];
+      _font = settings['font'];
+      _fontSize = settings['fontSize'];
+      String serverListJson = settings['serverList'];
+      serverListJson = serverListJson.substring(1, (serverListJson.length - 1));
+      _serverList = serverListJson.split(", ");
+      _setServerItems();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  void _saveSettings() async {
+    Map settings = {
+      '"currentServer"': '"${socket.io.uri}"',
+      '"username"': '"$_userName"',
+      '"font"': '"$_font"',
+      '"fontSize"': _fontSize,
+      '"serverList"': '"${_serverList.toString()}"',
+    };
+    BiometricStorageFile settingsStore = await BiometricStorage().getStorage(
+      'settings',
+      options: StorageFileInitOptions(
+        authenticationRequired: false,
+      ),
+    );
+    settingsStore.write(settings.toString());
+  }
+
   void removeChatItem(int itemIndex) {
-    _messageList
-        .remove(_messageList.firstWhere((item) => item.itemIndex == itemIndex));
-  }
-
-  void _saveAddress() async {
-    final SharedPreferences settings = await _settings;
-    settings.setString('address', socket.io.uri);
-  }
-
-  void _saveUsername() async {
-    final SharedPreferences settings = await _settings;
-    settings.setString('userName', _userName);
-  }
-
-  void _saveFont() async {
-    final SharedPreferences settings = await _settings;
-    settings.setString('font', _font);
-  }
-
-  void _saveFontSize() async {
-    final SharedPreferences settings = await _settings;
-    settings.setDouble('fontSize', _fontSize);
-  }
-
-  void _saveServerList() async {
-    final SharedPreferences settings = await _settings;
-    settings.setStringList('serverList', _serverList);
+    _messageLists[_currentChannel]!.remove(_messageLists[_currentChannel]!
+        .firstWhere((item) => item.itemIndex == itemIndex));
   }
 
   void _addServer() async {
+    _serverList.removeWhere((element) => element == '');
+    if (socket.io.uri.isEmpty) {
+      return;
+    }
     if (!_serverList.contains(socket.io.uri)) {
       _serverList.add(socket.io.uri);
       if (_serverList.length > 5) {
@@ -233,8 +237,6 @@ class _MainChatState extends State<_MainChat> {
       _serverList.add(socket.io.uri);
     }
     _setServerItems();
-    _saveServerList();
-    _saveAddress();
     setState(() {});
   }
 
@@ -259,31 +261,64 @@ class _MainChatState extends State<_MainChat> {
   }
 
   void _sendMessage(String message) {
-    socket.emit('chatMessage', message.toString());
+    ChatItem item = ChatItem(-1, _userName, _currentChannel, 't', message);
+    socket.emit('chatMessage', item.toJson().toString());
+  }
+
+  void _backlogFill(ChatItem item) {
+    setState(() {
+      _messageLists.putIfAbsent(item.channel, () => []);
+      _messageLists[item.channel]!.add(item);
+      _verifyMessageOrder(item.channel);
+      if (_editIndex >= 0) {
+        _editIndex++;
+      }
+      setState(() {});
+    });
   }
 
   void _addChatItem(ChatItem item) {
     setState(() {
-      _messageList.add(item);
-      _verifyMessageOrder();
+      _messageLists.putIfAbsent(item.channel, () => []);
+      _messageLists[item.channel]!.insert(0, item);
+      _verifyMessageOrder(item.channel);
+      if (_editIndex >= 0) {
+        _editIndex++;
+      }
     });
     if (item.userName != _userName) {
-      SystemSound.play(SystemSoundType.alert);
+      AudioPlayer().play(
+        AssetSource('message.mp3'),
+        volume: .25,
+        mode: PlayerMode.lowLatency,
+      );
     }
   }
 
-  void _sendImage(File image) async {
-    Uint8List bytes = await image.readAsBytes();
-    socket.emitWithBinary('image', bytes);
+  Future<Uint8List> _getImage(File image) async {
+    return await image.readAsBytes();
+  }
+
+  void _sendImageFile(String path) async {
+    File file = File(path);
+    Uint8List bytes = await _getImage(file);
+    _sendImageBytes(bytes);
+  }
+
+  void _sendImageBytes(Uint8List bytes) async {
+    ChatItem item = ChatItem(-1, _userName, _currentChannel, 't', bytes);
+    socket.emitWithBinary('image', item.toJson().toString());
   }
 
   void _testMessage() {
+    if (_imagePaste) {
+      _sendImageBytes(_imageBytes!);
+      _imagePaste = false;
+    }
     String message = _controller.text;
     _controller.text = '';
     if (!_isURL(message) && _isImageFile(message)) {
-      _sendImage(
-        File(message),
-      );
+      _sendImageFile(message);
     } else if (!(message == '')) {
       _sendMessage(message);
     }
@@ -300,28 +335,13 @@ class _MainChatState extends State<_MainChat> {
     return text.startsWith("http");
   }
 
-  void _scrollToEnd() async {
-    await _scroller.animateTo(_scroller.position.minScrollExtent,
-        duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
-  }
-
   void _newClientCalls() {
     if (_newClient) {
       if (_userName.isEmpty) {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (BuildContext context) =>
-                UserNamePrompt(controller: _userNameController, socket: socket),
-          ),
-        );
+        _changeUserName();
       }
       if (socket.io.uri.isEmpty) {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (BuildContext context) =>
-                AddressPrompt(controller: _addressController, socket: socket),
-          ),
-        );
+        _changeServerAddress();
       }
       _newClient = false;
     }
@@ -330,8 +350,20 @@ class _MainChatState extends State<_MainChat> {
   void _changeUserName() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (BuildContext context) =>
-            UserNamePrompt(controller: _userNameController, socket: socket),
+        builder: (BuildContext context) {
+          TextEditingController controller = TextEditingController();
+          return InputPrompt(
+            controller: controller,
+            formTitle: 'Username',
+            onSubmit: () {
+              if (controller.text.isEmpty || controller.text.length > 16) {
+                return;
+              }
+              socket.emit('usernameSet', controller.text);
+              Navigator.of(context).pop();
+            },
+          );
+        },
       ),
     );
   }
@@ -339,10 +371,32 @@ class _MainChatState extends State<_MainChat> {
   void _changeServerAddress() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (BuildContext context) =>
-            AddressPrompt(controller: _addressController, socket: socket),
+        builder: (BuildContext context) {
+          TextEditingController controller = TextEditingController();
+          return InputPrompt(
+            controller: controller,
+            formTitle: 'Server Address',
+            onSubmit: () {
+              if (!controller.text.startsWith('http://')) {
+                controller.text = 'http://${controller.text}/';
+              }
+              if (socket.connected) {
+                socket.disconnect();
+              }
+              socket.io.uri = controller.text;
+              Navigator.of(context).pop();
+              socket.connect();
+            },
+          );
+        },
       ),
     );
+  }
+
+  void _toggleServerPanel() {
+    setState(() {
+      _showServerPanel = !_showServerPanel;
+    });
   }
 
   void _toggleUserPanel() {
@@ -365,14 +419,16 @@ class _MainChatState extends State<_MainChat> {
     });
   }
 
-  void _userIsTyping(String userName) {
+  void _userIsTyping(ChatItem item) {
     setState(() {
-      if (userName != _userName && !_typingList.contains(userName)) {
-        _typingList.add(userName);
+      if (item.userName != _userName &&
+          !_typingList.contains(item.userName) &&
+          _currentChannel == item.channel) {
+        _typingList.add(item.userName);
       }
     });
     Timer(const Duration(seconds: 3), () {
-      _userNoLongerTyping(userName);
+      _userNoLongerTyping(item.userName);
     });
   }
 
@@ -384,7 +440,11 @@ class _MainChatState extends State<_MainChat> {
 
   void _thisClientTyping() {
     if (_sentTypingPing.elapsedMilliseconds > 1000) {
-      socket.emit('userTyping', '');
+      socket.emit(
+          'userTyping',
+          ChatItem(-1, _userName, _currentChannel, 't', 't')
+              .toJson()
+              .toString());
       _sentTypingPing.reset();
     }
   }
@@ -393,34 +453,36 @@ class _MainChatState extends State<_MainChat> {
     setState(() {
       _fontSize++;
     });
-    _saveFontSize();
   }
 
   void _decreaseFontSize() {
     setState(() {
       _fontSize--;
     });
-    _saveFontSize();
   }
 
   void _changeFont(String font) {
     setState(() {
       _font = font;
     });
-    _saveFont();
   }
 
-  void _verifyMessageOrder() async {
-    _messageList.sort();
-    for (var i = 1; i < _messageList.length; i++) {
-      if (_messageList[i - 1].itemIndex == _messageList[i].itemIndex) {
-        _messageList.remove(_messageList[i - 1]);
+  void _verifyMessageOrder(String channel) async {
+    setState(() {
+      if (_messageLists[channel] != null) {
+        _messageLists[channel]!.sort();
+      }
+    });
+    List<ChatItem> items = _messageLists[channel]!;
+    for (var i = 1; i < items.length; i++) {
+      if (items[i - 1].itemIndex == items[i].itemIndex) {
+        items.remove(items[i - 1]);
       }
     }
   }
 
-  void _pushImage(Image image) async {
-    await Navigator.of(context).push(
+  void _pushImage(Image image) {
+    Navigator.of(context).push(
       DialogRoute<void>(
         context: context,
         builder: (BuildContext context) => ImageView(
@@ -431,97 +493,283 @@ class _MainChatState extends State<_MainChat> {
   }
 
   void _requestMore() async {
-    socket.emit('messageRequest', _messageList.last.itemIndex);
+    ChatItem item = ChatItem(_messageLists[_currentChannel]!.last.itemIndex,
+        _userName, _currentChannel, 'r', null);
+    socket.emit('messageRequest', item.toJson().toString());
+  }
+
+  void _pasteImage() async {
+    ClipboardData? data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (data != null) {
+      _controller.text = _controller.text + data.text!;
+      return;
+    }
+    _imageBytes = await Pasteboard.image;
+    _imagePaste = true;
+    setState(() {});
+  }
+
+  void _selectImage() async {
+    XFile? image = await ImagePicker().pickImage(source: ImageSource.gallery);
+    _imageBytes = await image!.readAsBytes();
+    _imagePaste = true;
+    setState(() {});
+  }
+
+  void _addChannel() {
+    Navigator.of(context).push(
+      DialogRoute<void>(
+        context: context,
+        builder: (BuildContext context) {
+          TextEditingController controller = TextEditingController();
+          return InputPrompt(
+            controller: controller,
+            formTitle: 'New Channel',
+            onSubmit: () {
+              if (controller.text.isEmpty || controller.text.length > 16) {
+                return;
+              }
+              _changeChannel(controller.text);
+              Navigator.of(context).pop();
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  void _changeChannel(String newChannel) {
+    setState(() {
+      _editIndex = -1;
+      _messageLists.putIfAbsent(newChannel, () => []);
+      _currentChannel = newChannel;
+    });
+  }
+
+  bool _hideMainChat(BuildContext context) {
+    if (MediaQuery.of(context).size.width <
+            MediaQuery.of(context).size.height &&
+        (_showServerPanel || _showUserPanel)) {
+      return true;
+    }
+    return false;
+  }
+
+  void _editMessage(int index) {
+    setState(() {
+      _editingController.text = '';
+      _editIndex = index;
+    });
+  }
+
+  void _submitEdit() {
+    ChatItem initialItem = _messageLists[_currentChannel]![_editIndex];
+    ChatItem editItem = ChatItem(initialItem.itemIndex, initialItem.userName,
+        initialItem.channel, initialItem.type, _editingController.text);
+    socket.emit('edit', editItem.toJson().toString());
+  }
+
+  void _editItem(ChatItem editedItem) {
+    setState(() {
+      _messageLists[editedItem.channel]!
+          .removeWhere((element) => element.itemIndex == editedItem.itemIndex);
+      _messageLists[editedItem.channel]!.add(editedItem);
+      _verifyMessageOrder(editedItem.channel);
+    });
+  }
+
+  void _requestDelete() {
+    ChatItem deleteItem = _messageLists[_currentChannel]![_editIndex];
+    socket.emit('delete', deleteItem.toJson().toString());
+  }
+
+  void _deleteItem(ChatItem deleteItem) {
+    _messageLists[deleteItem.channel]!
+        .removeWhere((element) => element.itemIndex == deleteItem.itemIndex);
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-
     _userDisconnect(_userName);
 
-    if (_newClient) {
-      WidgetsBinding.instance.addPostFrameCallback((data) => _newClientCalls());
-    }
+    RoundedRectangleBorder panelShape = RoundedRectangleBorder(
+      side: BorderSide(
+        color: _neptuneColor,
+        width: 5,
+      ),
+    );
 
-    _userPanel = SizedBox(
-      // width: max(MediaQuery.of(context).size.width * 0.2, 100), TODO
-      width: MediaQuery.of(context).size.width * 0.2,
-      child: Material(
-        shape: RoundedRectangleBorder(
-          side: BorderSide(
-            color: _neptuneColor,
-            width: 5,
+    Widget serverPanel = const SizedBox();
+    if (_showServerPanel) {
+      serverPanel = Flexible(
+        flex: 4,
+        child: Material(
+          shape: panelShape,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                Text(
+                  'Server Name? IDK',
+                  style: TextStyle(
+                    fontFamily: _font,
+                    fontSize: _fontSize * 0.73,
+                    decoration: TextDecoration.underline,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ListView.builder(
+                      itemCount: _messageLists.entries.length + 1,
+                      itemBuilder: (context, index) {
+                        String text = '+ New Channel';
+                        void Function()? changeChannel = () => _addChannel();
+                        if (index < _messageLists.entries.length) {
+                          text = _messageLists.keys.toList()[index];
+                          changeChannel = () => _changeChannel(
+                              _messageLists.keys.toList()[index]);
+                        }
+                        return MaterialButton(
+                          shape: const RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.all(Radius.circular(8.0)),
+                          ),
+                          onPressed: changeChannel,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.tag),
+                              const SizedBox(
+                                width: 5,
+                              ),
+                              Flexible(
+                                child: Text(
+                                  text,
+                                  style: TextStyle(
+                                    fontSize: _fontSize * 0.64,
+                                    fontFamily: _font,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              const SizedBox(
-                height: 15,
-              ),
-              Text(
-                'Connected Users',
-                style: TextStyle(
-                  fontFamily: _font,
-                  fontSize: _fontSize * 0.73,
-                  decoration: TextDecoration.underline,
+      );
+    }
+
+    Widget userPanel = const SizedBox();
+    if (_showUserPanel) {
+      userPanel = Flexible(
+        flex: 4,
+        child: Material(
+          shape: panelShape,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                const SizedBox(
+                  height: 15,
                 ),
-                textAlign: TextAlign.center,
+                Text(
+                  'Connected Users',
+                  style: TextStyle(
+                    fontFamily: _font,
+                    fontSize: _fontSize * 0.73,
+                    decoration: TextDecoration.underline,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(
+                  height: 15,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ListView.separated(
+                      itemCount: _userList.length,
+                      separatorBuilder: (context, index) => const Divider(),
+                      itemBuilder: (BuildContext context, int index) {
+                        return Text(
+                          _userList[index],
+                          style: TextStyle(
+                            fontFamily: _font,
+                            fontSize: _fontSize * 0.64,
+                          ),
+                          overflow: TextOverflow.clip,
+                          textAlign: TextAlign.center,
+                          softWrap: false,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    List<ChatItem> currentChat = [];
+    if (_messageLists.isNotEmpty) {
+      currentChat = _messageLists[_currentChannel]!;
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        flexibleSpace: FlexibleSpaceBar(
+          background: Stack(
+            children: [
+              FractionallySizedBox(
+                widthFactor: .2,
+                alignment: Alignment.centerLeft,
+                child: MaterialButton(
+                  height: MediaQuery.of(context).size.height,
+                  color: _neptuneColor,
+                  hoverColor: Theme.of(context).cardColor,
+                  onPressed: _toggleServerPanel,
+                  child: const Icon(
+                    Icons.list,
+                    size: 40,
+                  ),
+                ),
               ),
-              const SizedBox(
-                height: 15,
+              Align(
+                alignment: Alignment.centerRight,
+                child: FractionallySizedBox(
+                  widthFactor: .2,
+                  child: MaterialButton(
+                    height: MediaQuery.of(context).size.height,
+                    color: _neptuneColor,
+                    hoverColor: Theme.of(context).cardColor,
+                    onPressed: _toggleUserPanel,
+                    child: const Icon(
+                      Icons.people,
+                      size: 40,
+                    ),
+                  ),
+                ),
               ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: ListView.separated(
-                    itemCount: _userList.length,
-                    separatorBuilder: (context, index) => const Divider(),
-                    itemBuilder: (BuildContext context, int index) {
-                      return Text(
-                        _userList[index],
-                        style: TextStyle(
-                          fontFamily: _font,
-                          fontSize: _fontSize * 0.64,
-                        ),
-                        overflow: TextOverflow.clip,
-                        textAlign: TextAlign.center,
-                        softWrap: false,
-                      );
-                    },
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
+                  height: MediaQuery.of(context).size.height,
+                  width: 60,
+                  child: const ColoredBox(
+                    color: Colors.grey,
                   ),
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        flexibleSpace: FlexibleSpaceBar(
-          background: FractionallySizedBox(
-            widthFactor: .2,
-            alignment: Alignment.topRight,
-            child: MaterialButton(
-              color: _neptuneColor,
-              hoverColor: Theme.of(context).cardColor,
-              onPressed: _toggleUserPanel,
-              child: const Icon(
-                Icons.people,
-                size: 40,
-              ),
-            ),
           ),
         ),
       ),
@@ -672,7 +920,7 @@ class _MainChatState extends State<_MainChat> {
                     DropdownButton(
                       value: socket.io.uri,
                       items: _serverItemList,
-                      onChanged: (serverURL) => _changeServer(serverURL),
+                      onChanged: (serverURL) => _changeServer(serverURL!),
                     ),
                   ],
                 ),
@@ -701,216 +949,284 @@ class _MainChatState extends State<_MainChat> {
       ),
       body: Row(
         children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 500),
-            // curve: Curves.bounceOut,
-            curve: Curves.ease,
-            width: MediaQuery.of(context).size.width -
-                ((_showUserPanel ? 1 : 0) *
-                    MediaQuery.of(context).size.width *
-                    0.2),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 10),
-                    child: Align(
-                      alignment: Alignment.bottomCenter,
-                      child: ListView.separated(
-                        clipBehavior: Clip.none,
-                        controller: _scroller,
-                        reverse: true,
-                        // physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(),
-                        shrinkWrap: true,
-                        itemCount: _messageList.length,
-                        itemBuilder: ((context, index) {
-                          Row newRow = Row(
-                            children: [
-                              Text(
-                                '${_messageList[index].userName}: ',
-                                style: TextStyle(
-                                  fontFamily: _font,
-                                  fontSize: _fontSize,
-                                ),
-                              ),
-                            ],
-                          );
-                          switch (_messageList[index].type) {
-                            case 't':
-                              if (_isURL(_messageList[index].content) &&
-                                  _isImageFile(_messageList[index].content)) {
-                                newRow.children.add(
-                                  ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                      maxWidth:
-                                          MediaQuery.of(context).size.width *
-                                              0.5,
-                                      maxHeight:
-                                          MediaQuery.of(context).size.height *
-                                              0.6,
-                                    ),
-                                    child: Image.network(
-                                      _messageList[index].content,
-                                      fit: BoxFit.scaleDown,
-                                    ),
-                                  ),
-                                );
-                                break;
-                              }
-                              if (_messageList[index].content.contains('*')) {
-                                TextSpan textSpan = TextSpan(
+          serverPanel,
+          (_hideMainChat(context))
+              ? const SizedBox()
+              : Flexible(
+                  flex: 16,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 10),
+                          child: ListView.separated(
+                            clipBehavior: Clip.none,
+                            controller: _scroller,
+                            reverse: true,
+                            padding: const EdgeInsets.symmetric(),
+                            shrinkWrap: true,
+                            itemCount: currentChat.length,
+                            itemBuilder: ((context, index) {
+                              if (index == _editIndex) {
+                                if (_editingController.text == '') {
+                                  _editingController.text =
+                                      currentChat[index].content;
+                                }
+                                return Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    TextSpan(
-                                      text: _messageList[index]
-                                          .content
-                                          .split('*')
-                                          .first,
+                                    Text(
+                                      '${currentChat[index].userName}: ',
                                       style: TextStyle(
                                         fontFamily: _font,
                                         fontSize: _fontSize,
                                       ),
                                     ),
-                                  ],
-                                );
-                                for (var i = 1;
-                                    i <
-                                        _messageList[index]
-                                            .content
-                                            .split('*')
-                                            .length;
-                                    i++) {
-                                  if (i % 2 == 1) {
-                                    textSpan.children?.add(
-                                      TextSpan(
-                                        text: _messageList[index]
-                                            .content
-                                            .split('*')[i],
+                                    Flexible(
+                                      child: TextField(
+                                        controller: _editingController,
+                                        minLines: 1,
+                                        maxLines: 10,
                                         style: TextStyle(
-                                          fontFamily: _font,
                                           fontSize: _fontSize,
-                                          fontStyle: FontStyle.italic,
+                                          fontFamily: _font,
                                         ),
                                       ),
-                                    );
-                                  } else {
-                                    textSpan.children?.add(
-                                      TextSpan(
-                                        text: _messageList[index]
-                                            .content
-                                            .split('*')[i],
-                                        style: TextStyle(
-                                          fontFamily: _font,
-                                          fontSize: _fontSize,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                }
-                                newRow.children
-                                    .add(Flexible(child: Text.rich(textSpan)));
-                                break;
-                              }
-                              if (_isURL(_messageList[index].content)) {
-                                newRow.children.add(
-                                  Flexible(
-                                    child: InkWell(
-                                      child: Text(
-                                        _messageList[index].content,
-                                        style: TextStyle(
-                                          fontFamily: _font,
-                                          fontSize: _fontSize,
-                                          color: const Color.fromARGB(
-                                              255, 53, 98, 203),
-                                        ),
-                                      ),
-                                      onTap: () {
-                                        try {
-                                          launchUrl(Uri.tryParse(
-                                              _messageList[index].content)!);
-                                        } catch (e) {
-                                          return;
-                                        }
+                                    ),
+                                    const SizedBox(width: 20),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline),
+                                      onPressed: () {
+                                        _requestDelete();
+                                        _editingController.text = '';
+                                        setState(() {
+                                          _editIndex = -1;
+                                        });
                                       },
                                     ),
-                                  ),
+                                    const SizedBox(width: 20),
+                                    IconButton(
+                                      icon: const Icon(Icons.cancel_outlined),
+                                      onPressed: () {
+                                        _editingController.text = '';
+                                        setState(() {
+                                          _editIndex = -1;
+                                        });
+                                      },
+                                    ),
+                                    const SizedBox(width: 20),
+                                    IconButton(
+                                      icon: const Icon(Icons.check),
+                                      onPressed: () {
+                                        _submitEdit();
+                                        _editingController.text = '';
+                                        setState(() {
+                                          _editIndex = -1;
+                                        });
+                                      },
+                                    ),
+                                    const SizedBox(width: 20),
+                                  ],
                                 );
-                                break;
                               }
-                              newRow.children.add(
-                                Flexible(
-                                  child: SelectableText(
-                                    _messageList[index].content,
+                              Row newRow = Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${currentChat[index].userName}: ',
                                     style: TextStyle(
                                       fontFamily: _font,
                                       fontSize: _fontSize,
                                     ),
                                   ),
-                                ),
+                                ],
                               );
-                              break;
-                            case 'i':
-                              newRow.children.add(
-                                Flexible(
-                                  child: ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                      maxWidth:
-                                          MediaQuery.of(context).size.width *
+                              switch (currentChat[index].type) {
+                                case 't':
+                                  if (_isURL(currentChat[index].content) &&
+                                      _isImageFile(
+                                          currentChat[index].content)) {
+                                    newRow.children.add(
+                                      ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxWidth: MediaQuery.of(context)
+                                                  .size
+                                                  .width *
+                                              0.5,
+                                          maxHeight: MediaQuery.of(context)
+                                                  .size
+                                                  .height *
+                                              0.6,
+                                        ),
+                                        child: Image.network(
+                                          currentChat[index].content,
+                                          fit: BoxFit.scaleDown,
+                                        ),
+                                      ),
+                                    );
+                                    break;
+                                  }
+                                  if (currentChat[index]
+                                      .content
+                                      .contains('http')) {
+                                    List<Widget> newWidgets = [];
+                                    List<String> split =
+                                        currentChat[index].content.split(' ');
+                                    String plainText = '';
+                                    for (int i = 0; i < split.length; i++) {
+                                      if (split[i].contains('http')) {
+                                        if (plainText != '') {
+                                          newWidgets.add(SelectableText.rich(
+                                              _italicise(plainText)));
+                                          plainText = '';
+                                        }
+                                        newWidgets.add(
+                                          Flexible(
+                                            child: InkWell(
+                                              child: Text(
+                                                split[i],
+                                                style: TextStyle(
+                                                  fontFamily: _font,
+                                                  fontSize: _fontSize,
+                                                  color: const Color.fromARGB(
+                                                      255, 53, 98, 203),
+                                                ),
+                                              ),
+                                              onTap: () {
+                                                try {
+                                                  launchUrl(Uri.tryParse(
+                                                      currentChat[index]
+                                                          .content)!);
+                                                } catch (e) {
+                                                  return;
+                                                }
+                                              },
+                                            ),
+                                          ),
+                                        );
+                                      } else {
+                                        plainText += '${split[i]} ';
+                                      }
+                                    }
+                                    if (plainText != '') {
+                                      newWidgets.add(SelectableText.rich(
+                                          _italicise(plainText)));
+                                      plainText = '';
+                                    }
+                                    newRow.children.add(
+                                      Flexible(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: newWidgets,
+                                        ),
+                                      ),
+                                    );
+                                    break;
+                                  }
+                                  newRow.children.add(
+                                    Flexible(
+                                      child: SelectableText.rich(_italicise(
+                                          currentChat[index].content)),
+                                    ),
+                                  );
+                                  break;
+                                case 'i':
+                                  Uint8List bytes = currentChat[index].content;
+                                  newRow.children.add(
+                                    Flexible(
+                                      child: ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxWidth: MediaQuery.of(context)
+                                                  .size
+                                                  .width *
                                               0.8,
-                                      maxHeight:
-                                          MediaQuery.of(context).size.height *
+                                          maxHeight: MediaQuery.of(context)
+                                                  .size
+                                                  .height *
                                               0.4,
-                                    ),
-                                    child: MaterialButton(
-                                      onPressed: () => _pushImage(
-                                        Image.memory(
-                                            _messageList[index].content),
+                                        ),
+                                        child: MaterialButton(
+                                          onPressed: () => _pushImage(
+                                            Image.memory(bytes),
+                                          ),
+                                          child: Image.memory(bytes),
+                                        ),
                                       ),
-                                      child: Image.memory(
-                                        _messageList[index].content,
-                                      ),
                                     ),
-                                  ),
+                                  );
+                                  break;
+                                default:
+                                  break;
+                              }
+                              _editBtns.add(const SizedBox());
+                              return MouseRegion(
+                                onEnter: (event) {
+                                  setState(() {
+                                    if (currentChat[index].type != 't' ||
+                                        currentChat[index].userName !=
+                                            _userName) {
+                                      return;
+                                    }
+                                    _editBtns[index] = TextButton(
+                                      style: const ButtonStyle(
+                                        minimumSize: MaterialStatePropertyAll(
+                                            Size(0, 0)),
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      onPressed: () => _editMessage(index),
+                                      child: Text(
+                                        'Edit',
+                                        style: TextStyle(
+                                          fontSize: _fontSize,
+                                          fontFamily: _font,
+                                        ),
+                                      ),
+                                    );
+                                  });
+                                },
+                                onExit: (event) {
+                                  setState(() {
+                                    _editBtns[index] = const SizedBox();
+                                  });
+                                },
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Flexible(child: newRow),
+                                    _editBtns[index],
+                                    const SizedBox(
+                                      width: 15,
+                                    )
+                                  ],
                                 ),
                               );
-                              break;
-                            case 'b':
-                              newRow.children.add(
-                                MaterialButton(
-                                  onPressed: () => _requestMore(),
-                                ),
-                              );
-                              break;
-                            default:
-                              break;
-                          }
-                          return newRow;
-                        }),
-                        separatorBuilder: (context, index) => const Divider(),
+                            }),
+                            separatorBuilder: (context, index) =>
+                                const Divider(),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ),
-                Material(
-                  color: _neptuneColor,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                    ),
-                  ),
-                  child: LayoutBuilder(
-                    builder: (buildContext, constraints) {
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                      Material(
+                        color: _neptuneColor,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            topRight: Radius.circular(16),
+                          ),
+                        ),
+                        child: LayoutBuilder(
+                          builder: (buildContext, constraints) {
+                            List<Widget> inputColumn = [];
+                            inputColumn = [
                               SizedBox(
-                                width: constraints.maxWidth - 75,
+                                width: constraints.maxWidth - 130,
                                 child: Padding(
                                   padding:
                                       const EdgeInsets.fromLTRB(10, 0, 0, 10),
@@ -950,7 +1266,7 @@ class _MainChatState extends State<_MainChat> {
                               ),
                               SizedBox(
                                 height: _fontSize * 0.36,
-                                width: constraints.maxWidth - 75,
+                                width: constraints.maxWidth - 130,
                                 child: Padding(
                                   padding:
                                       const EdgeInsets.fromLTRB(15, 0, 0, 0),
@@ -982,39 +1298,145 @@ class _MainChatState extends State<_MainChat> {
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(
-                            width: 15,
-                          ),
-                          FloatingActionButton(
-                            onPressed: _testMessage,
-                            tooltip: 'Send',
-                            splashColor: Colors.lightBlue,
-                            hoverColor: Colors.blue,
-                            mini: true,
-                            child: const Icon(Icons.send),
-                          ),
-                        ],
-                      );
-                    },
+                            ];
+                            if (_imagePaste) {
+                              inputColumn.insert(
+                                0,
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: constraints.maxWidth - 130,
+                                    maxHeight:
+                                        MediaQuery.of(context).size.height *
+                                            0.3,
+                                  ),
+                                  child: IntrinsicWidth(
+                                    child: Stack(
+                                      children: [
+                                        Image.memory(_imageBytes!),
+                                        Align(
+                                          alignment: Alignment.topRight,
+                                          child: MaterialButton(
+                                            height: 40,
+                                            minWidth: 40,
+                                            shape: const CircleBorder(),
+                                            onPressed: () => {
+                                              _imagePaste = false,
+                                              setState(() {}),
+                                            },
+                                            child: const Icon(
+                                              Icons.cancel_rounded,
+                                              size: 40,
+                                              color: Color.fromARGB(
+                                                  255, 219, 14, 14),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10),
+                                  child: MaterialButton(
+                                    onPressed: _pasteImage,
+                                    onLongPress: _selectImage,
+                                    shape: const CircleBorder(),
+                                    color: ColorScheme.fromSeed(
+                                            seedColor: _neptuneColor)
+                                        .secondary,
+                                    height: 50,
+                                    minWidth: 50,
+                                    hoverColor: Colors.blue,
+                                    child: const Icon(Icons.add_sharp),
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: inputColumn,
+                                ),
+                                const SizedBox(
+                                  width: 10,
+                                ),
+                                MaterialButton(
+                                  onPressed: _testMessage,
+                                  splashColor: Colors.lightBlue,
+                                  hoverColor: Colors.blue,
+                                  shape: const CircleBorder(),
+                                  color: ColorScheme.fromSeed(
+                                          seedColor: _neptuneColor)
+                                      .secondary,
+                                  height: 50,
+                                  minWidth: 50,
+                                  child: const Icon(Icons.send),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              if (_showUserPanel) {
-                return _userPanel;
-              } else {
-                return _closedUserPanel;
-              }
-            },
-          ),
+          userPanel,
         ],
       ),
       resizeToAvoidBottomInset: true,
+      onDrawerChanged: (open) => open ? {} : _saveSettings(),
     );
+  }
+
+  TextSpan _italicise(String text) {
+    List<String> split = text.split('*');
+    if (split.length < 3) {
+      return TextSpan(
+        text: text,
+        style: TextStyle(
+          fontFamily: _font,
+          fontSize: _fontSize,
+        ),
+      );
+    }
+    TextSpan textSpan = TextSpan(
+      children: [
+        TextSpan(
+          text: split.first,
+          style: TextStyle(
+            fontFamily: _font,
+            fontSize: _fontSize,
+          ),
+        ),
+      ],
+    );
+    for (var i = 1; i < split.length; i++) {
+      if (i % 2 == 1) {
+        textSpan.children?.add(
+          TextSpan(
+            text: split[i],
+            style: TextStyle(
+              fontFamily: _font,
+              fontSize: _fontSize,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        );
+      } else {
+        textSpan.children?.add(
+          TextSpan(
+            text: split[i],
+            style: TextStyle(
+              fontFamily: _font,
+              fontSize: _fontSize,
+            ),
+          ),
+        );
+      }
+    }
+    return textSpan;
   }
 }
