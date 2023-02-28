@@ -1,3 +1,4 @@
+// Copyright Terry Hancock 2023
 class ChatItem extends Comparable<ChatItem> {
   final int itemIndex;
   final String userName;
@@ -29,10 +30,12 @@ class ChatItem extends Comparable<ChatItem> {
       };
 
   dynamic contentToJson() {
-    if (type == 't') {
-      return '"$content"';
+    switch (type) {
+      case 't':
+        return '"$content"';
+      default:
+        return content;
     }
-    return content;
   }
 
   @override

@@ -1,15 +1,11 @@
+// Copyright Terry Hancock 2023
 import 'package:flutter/material.dart';
 
-class ImageView extends StatefulWidget {
+class ImageView extends StatelessWidget {
   final Image image;
 
   const ImageView({super.key, required this.image});
 
-  @override
-  State<ImageView> createState() => _ImageViewState();
-}
-
-class _ImageViewState extends State<ImageView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,7 +26,7 @@ class _ImageViewState extends State<ImageView> {
               child: SizedBox(
                 height: MediaQuery.of(context).size.height * 0.8,
                 width: MediaQuery.of(context).size.width * 0.8,
-                child: widget.image,
+                child: image,
               ),
             ),
           ),

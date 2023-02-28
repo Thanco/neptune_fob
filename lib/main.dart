@@ -1,3 +1,4 @@
+// Copyright Terry Hancock 2023
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -49,9 +50,10 @@ class _MainChat extends StatefulWidget {
 class _MainChatState extends State<_MainChat> {
   final List<Widget> _editBtns = [];
   final Map<String, List<ChatItem>> _messageLists = {'Default': []};
+  final Map<String, bool> _messageListNews = {'Default': false};
   String _currentChannel = 'Default';
   final List<String> _userList = [];
-  List<String> _serverList = [];
+  final List<String> _serverList = [];
   List<DropdownMenuItem<String>> _serverItemList = [];
   final TextEditingController _controller = TextEditingController();
 
@@ -102,32 +104,32 @@ class _MainChatState extends State<_MainChat> {
         _userList.clear();
       }
     });
-    socket.onConnectError((error) => _messageLists['Default']!
-        .add(ChatItem(-1, 'System', 'Default', 't', 'Error! $error')));
-    socket.onConnectTimeout((data) => _messageLists['Default']!.add(ChatItem(-1,
-        'System', 'Default', 't', 'Im going to stop trying now :) (timeout)')));
+    socket.onConnectError(
+        (error) => _messageLists['Default']!.add(ChatItem(-1, 'System', 'Default', 't', 'Error! $error')));
+    socket.onConnectTimeout((data) => _messageLists['Default']!
+        .add(ChatItem(-1, 'System', 'Default', 't', 'Im going to stop trying now :) (timeout)')));
     socket.on(
       'chatMessage',
       (message) {
         ChatItem newMessage = ChatItem.fromJson(message);
-        _addChatItem(newMessage);
+        _addNewChat(newMessage);
         _userNoLongerTyping(newMessage.userName);
       },
     );
     socket.on('backlogFill', (itemJson) {
       ChatItem backlogMessage = ChatItem.fromJson(itemJson);
-      _backlogFill(backlogMessage);
+      _addChatItem(backlogMessage);
     });
     socket.on('image', (imageMessage) {
       ChatItem newImage = ChatItem.fromJson(imageMessage.first);
-      _addChatItem(newImage);
+      _addNewChat(newImage);
 
       // ack response
       imageMessage.last(null);
     });
     socket.on('backlogImage', (imageMessage) {
       ChatItem newImage = ChatItem.fromJson(imageMessage.first);
-      _backlogFill(newImage);
+      _addChatItem(newImage);
 
       // ack response
       imageMessage.last(null);
@@ -136,8 +138,7 @@ class _MainChatState extends State<_MainChat> {
       _userName = userName;
       _addServer();
     });
-    socket.on('userListSend',
-        (userList) => _userList.addAll(userList.cast<String>()));
+    socket.on('userListSend', (userList) => _userList.addAll(userList.cast<String>()));
     socket.on('userJoin', (userName) => _userConnect(userName));
     socket.on('userLeave', (userName) => _userDisconnect(userName));
     socket.on('userTyping', (itemJson) {
@@ -178,9 +179,11 @@ class _MainChatState extends State<_MainChat> {
   }
 
   Future<bool> _loadSettings() async {
+    if ((await BiometricStorage().canAuthenticate()) != CanAuthenticateResponse.success) {
+      // TODO bro idk tbh
+    }
     try {
-      BiometricStorageFile settingsStore =
-          await BiometricStorage().getStorage('thancoHostNeptuneSettings');
+      BiometricStorageFile settingsStore = await BiometricStorage().getStorage('settings');
       String? settingsJson = await settingsStore.read();
       Map settings = jsonDecode(settingsJson!);
       socket.io.uri = settings['currentServer'];
@@ -192,9 +195,14 @@ class _MainChatState extends State<_MainChat> {
       _fontSize = settings['fontSize'];
       String serverListJson = settings['serverList'];
       serverListJson = serverListJson.substring(1, (serverListJson.length - 1));
-      _serverList = serverListJson.split(", ");
+      List<String> servers = serverListJson.split(", ");
+      for (int i = 0; i < servers.length; i++) {
+        if (!_serverList.contains(servers[i]) && !(servers[i] == '')) {
+          _serverList.add(servers[i]);
+        }
+      }
       _setServerItems();
-      return true;
+      return !(_serverList.isEmpty || _userName.isEmpty);
     } catch (e) {
       return false;
     }
@@ -218,8 +226,8 @@ class _MainChatState extends State<_MainChat> {
   }
 
   void removeChatItem(int itemIndex) {
-    _messageLists[_currentChannel]!.remove(_messageLists[_currentChannel]!
-        .firstWhere((item) => item.itemIndex == itemIndex));
+    _messageLists[_currentChannel]!
+        .remove(_messageLists[_currentChannel]!.firstWhere((item) => item.itemIndex == itemIndex));
   }
 
   void _addServer() async {
@@ -265,9 +273,10 @@ class _MainChatState extends State<_MainChat> {
     socket.emit('chatMessage', item.toJson().toString());
   }
 
-  void _backlogFill(ChatItem item) {
+  void _addChatItem(ChatItem item) {
     setState(() {
       _messageLists.putIfAbsent(item.channel, () => []);
+      _messageListNews.putIfAbsent(item.channel, () => false);
       _messageLists[item.channel]!.add(item);
       _verifyMessageOrder(item.channel);
       if (_editIndex >= 0) {
@@ -277,15 +286,11 @@ class _MainChatState extends State<_MainChat> {
     });
   }
 
-  void _addChatItem(ChatItem item) {
-    setState(() {
-      _messageLists.putIfAbsent(item.channel, () => []);
-      _messageLists[item.channel]!.insert(0, item);
-      _verifyMessageOrder(item.channel);
-      if (_editIndex >= 0) {
-        _editIndex++;
-      }
-    });
+  void _addNewChat(ChatItem item) {
+    _addChatItem(item);
+    if (item.channel != _currentChannel) {
+      _messageListNews[item.channel] = true;
+    }
     if (item.userName != _userName) {
       AudioPlayer().play(
         AssetSource('message.mp3'),
@@ -325,10 +330,7 @@ class _MainChatState extends State<_MainChat> {
   }
 
   bool _isImageFile(String text) {
-    return text.endsWith(".jpg") ||
-        text.endsWith(".jpeg") ||
-        text.endsWith(".png") ||
-        text.endsWith(".gif");
+    return text.endsWith(".jpg") || text.endsWith(".jpeg") || text.endsWith(".png") || text.endsWith(".gif");
   }
 
   bool _isURL(String text) {
@@ -421,9 +423,7 @@ class _MainChatState extends State<_MainChat> {
 
   void _userIsTyping(ChatItem item) {
     setState(() {
-      if (item.userName != _userName &&
-          !_typingList.contains(item.userName) &&
-          _currentChannel == item.channel) {
+      if (item.userName != _userName && !_typingList.contains(item.userName) && _currentChannel == item.channel) {
         _typingList.add(item.userName);
       }
     });
@@ -440,11 +440,7 @@ class _MainChatState extends State<_MainChat> {
 
   void _thisClientTyping() {
     if (_sentTypingPing.elapsedMilliseconds > 1000) {
-      socket.emit(
-          'userTyping',
-          ChatItem(-1, _userName, _currentChannel, 't', 't')
-              .toJson()
-              .toString());
+      socket.emit('userTyping', ChatItem(-1, _userName, _currentChannel, 't', 't').toJson().toString());
       _sentTypingPing.reset();
     }
   }
@@ -493,8 +489,7 @@ class _MainChatState extends State<_MainChat> {
   }
 
   void _requestMore() async {
-    ChatItem item = ChatItem(_messageLists[_currentChannel]!.last.itemIndex,
-        _userName, _currentChannel, 'r', null);
+    ChatItem item = ChatItem(_messageLists[_currentChannel]!.last.itemIndex, _userName, _currentChannel, 'r', null);
     socket.emit('messageRequest', item.toJson().toString());
   }
 
@@ -542,17 +537,15 @@ class _MainChatState extends State<_MainChat> {
     setState(() {
       _editIndex = -1;
       _messageLists.putIfAbsent(newChannel, () => []);
+      _messageListNews.putIfAbsent(newChannel, () => false);
+      _messageListNews[newChannel] = false;
       _currentChannel = newChannel;
     });
   }
 
   bool _hideMainChat(BuildContext context) {
-    if (MediaQuery.of(context).size.width <
-            MediaQuery.of(context).size.height &&
-        (_showServerPanel || _showUserPanel)) {
-      return true;
-    }
-    return false;
+    return MediaQuery.of(context).size.width < MediaQuery.of(context).size.height &&
+        (_showServerPanel || _showUserPanel);
   }
 
   void _editMessage(int index) {
@@ -564,15 +557,14 @@ class _MainChatState extends State<_MainChat> {
 
   void _submitEdit() {
     ChatItem initialItem = _messageLists[_currentChannel]![_editIndex];
-    ChatItem editItem = ChatItem(initialItem.itemIndex, initialItem.userName,
-        initialItem.channel, initialItem.type, _editingController.text);
+    ChatItem editItem = ChatItem(
+        initialItem.itemIndex, initialItem.userName, initialItem.channel, initialItem.type, _editingController.text);
     socket.emit('edit', editItem.toJson().toString());
   }
 
   void _editItem(ChatItem editedItem) {
     setState(() {
-      _messageLists[editedItem.channel]!
-          .removeWhere((element) => element.itemIndex == editedItem.itemIndex);
+      _messageLists[editedItem.channel]!.removeWhere((element) => element.itemIndex == editedItem.itemIndex);
       _messageLists[editedItem.channel]!.add(editedItem);
       _verifyMessageOrder(editedItem.channel);
     });
@@ -584,8 +576,7 @@ class _MainChatState extends State<_MainChat> {
   }
 
   void _deleteItem(ChatItem deleteItem) {
-    _messageLists[deleteItem.channel]!
-        .removeWhere((element) => element.itemIndex == deleteItem.itemIndex);
+    _messageLists[deleteItem.channel]!.removeWhere((element) => element.itemIndex == deleteItem.itemIndex);
   }
 
   @override
@@ -628,13 +619,12 @@ class _MainChatState extends State<_MainChat> {
                         void Function()? changeChannel = () => _addChannel();
                         if (index < _messageLists.entries.length) {
                           text = _messageLists.keys.toList()[index];
-                          changeChannel = () => _changeChannel(
-                              _messageLists.keys.toList()[index]);
+                          changeChannel = () => _changeChannel(_messageLists.keys.toList()[index]);
                         }
+                        bool newMessage = index != _messageLists.entries.length && _messageListNews[text]!;
                         return MaterialButton(
                           shape: const RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.all(Radius.circular(8.0)),
+                            borderRadius: BorderRadius.all(Radius.circular(8.0)),
                           ),
                           onPressed: changeChannel,
                           child: Row(
@@ -645,10 +635,11 @@ class _MainChatState extends State<_MainChat> {
                               ),
                               Flexible(
                                 child: Text(
-                                  text,
+                                  '$text ${newMessage ? ' •' : ''}',
                                   style: TextStyle(
                                     fontSize: _fontSize * 0.64,
                                     fontFamily: _font,
+                                    fontWeight: newMessage ? FontWeight.w900 : FontWeight.normal,
                                   ),
                                 ),
                               ),
@@ -959,8 +950,7 @@ class _MainChatState extends State<_MainChat> {
                     children: [
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                           child: ListView.separated(
                             clipBehavior: Clip.none,
                             controller: _scroller,
@@ -971,8 +961,7 @@ class _MainChatState extends State<_MainChat> {
                             itemBuilder: ((context, index) {
                               if (index == _editIndex) {
                                 if (_editingController.text == '') {
-                                  _editingController.text =
-                                      currentChat[index].content;
+                                  _editingController.text = currentChat[index].content;
                                 }
                                 return Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1045,20 +1034,12 @@ class _MainChatState extends State<_MainChat> {
                               );
                               switch (currentChat[index].type) {
                                 case 't':
-                                  if (_isURL(currentChat[index].content) &&
-                                      _isImageFile(
-                                          currentChat[index].content)) {
+                                  if (_isURL(currentChat[index].content) && _isImageFile(currentChat[index].content)) {
                                     newRow.children.add(
                                       ConstrainedBox(
                                         constraints: BoxConstraints(
-                                          maxWidth: MediaQuery.of(context)
-                                                  .size
-                                                  .width *
-                                              0.5,
-                                          maxHeight: MediaQuery.of(context)
-                                                  .size
-                                                  .height *
-                                              0.6,
+                                          maxWidth: MediaQuery.of(context).size.width * 0.5,
+                                          maxHeight: MediaQuery.of(context).size.height * 0.6,
                                         ),
                                         child: Image.network(
                                           currentChat[index].content,
@@ -1068,18 +1049,14 @@ class _MainChatState extends State<_MainChat> {
                                     );
                                     break;
                                   }
-                                  if (currentChat[index]
-                                      .content
-                                      .contains('http')) {
+                                  if (currentChat[index].content.contains('http')) {
                                     List<Widget> newWidgets = [];
-                                    List<String> split =
-                                        currentChat[index].content.split(' ');
+                                    List<String> split = currentChat[index].content.split(' ');
                                     String plainText = '';
                                     for (int i = 0; i < split.length; i++) {
                                       if (split[i].contains('http')) {
                                         if (plainText != '') {
-                                          newWidgets.add(SelectableText.rich(
-                                              _italicise(plainText)));
+                                          newWidgets.add(SelectableText.rich(_italicise(plainText)));
                                           plainText = '';
                                         }
                                         newWidgets.add(
@@ -1090,15 +1067,12 @@ class _MainChatState extends State<_MainChat> {
                                                 style: TextStyle(
                                                   fontFamily: _font,
                                                   fontSize: _fontSize,
-                                                  color: const Color.fromARGB(
-                                                      255, 53, 98, 203),
+                                                  color: const Color.fromARGB(255, 53, 98, 203),
                                                 ),
                                               ),
                                               onTap: () {
                                                 try {
-                                                  launchUrl(Uri.tryParse(
-                                                      currentChat[index]
-                                                          .content)!);
+                                                  launchUrl(Uri.tryParse(currentChat[index].content)!);
                                                 } catch (e) {
                                                   return;
                                                 }
@@ -1111,16 +1085,14 @@ class _MainChatState extends State<_MainChat> {
                                       }
                                     }
                                     if (plainText != '') {
-                                      newWidgets.add(SelectableText.rich(
-                                          _italicise(plainText)));
+                                      newWidgets.add(SelectableText.rich(_italicise(plainText)));
                                       plainText = '';
                                     }
                                     newRow.children.add(
                                       Flexible(
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: newWidgets,
                                         ),
                                       ),
@@ -1129,8 +1101,7 @@ class _MainChatState extends State<_MainChat> {
                                   }
                                   newRow.children.add(
                                     Flexible(
-                                      child: SelectableText.rich(_italicise(
-                                          currentChat[index].content)),
+                                      child: SelectableText.rich(_italicise(currentChat[index].content)),
                                     ),
                                   );
                                   break;
@@ -1140,14 +1111,8 @@ class _MainChatState extends State<_MainChat> {
                                     Flexible(
                                       child: ConstrainedBox(
                                         constraints: BoxConstraints(
-                                          maxWidth: MediaQuery.of(context)
-                                                  .size
-                                                  .width *
-                                              0.8,
-                                          maxHeight: MediaQuery.of(context)
-                                                  .size
-                                                  .height *
-                                              0.4,
+                                          maxWidth: MediaQuery.of(context).size.width * 0.8,
+                                          maxHeight: MediaQuery.of(context).size.height * 0.4,
                                         ),
                                         child: MaterialButton(
                                           onPressed: () => _pushImage(
@@ -1166,17 +1131,13 @@ class _MainChatState extends State<_MainChat> {
                               return MouseRegion(
                                 onEnter: (event) {
                                   setState(() {
-                                    if (currentChat[index].type != 't' ||
-                                        currentChat[index].userName !=
-                                            _userName) {
+                                    if (currentChat[index].type != 't' || currentChat[index].userName != _userName) {
                                       return;
                                     }
                                     _editBtns[index] = TextButton(
                                       style: const ButtonStyle(
-                                        minimumSize: MaterialStatePropertyAll(
-                                            Size(0, 0)),
-                                        tapTargetSize:
-                                            MaterialTapTargetSize.shrinkWrap,
+                                        minimumSize: MaterialStatePropertyAll(Size(0, 0)),
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                       ),
                                       onPressed: () => _editMessage(index),
                                       child: Text(
@@ -1195,8 +1156,7 @@ class _MainChatState extends State<_MainChat> {
                                   });
                                 },
                                 child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Flexible(child: newRow),
@@ -1208,8 +1168,7 @@ class _MainChatState extends State<_MainChat> {
                                 ),
                               );
                             }),
-                            separatorBuilder: (context, index) =>
-                                const Divider(),
+                            separatorBuilder: (context, index) => const Divider(),
                           ),
                         ),
                       ),
@@ -1228,8 +1187,7 @@ class _MainChatState extends State<_MainChat> {
                               SizedBox(
                                 width: constraints.maxWidth - 130,
                                 child: Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(10, 0, 0, 10),
+                                  padding: const EdgeInsets.fromLTRB(10, 0, 0, 10),
                                   child: TextFormField(
                                     style: TextStyle(
                                       fontFamily: _font,
@@ -1244,16 +1202,10 @@ class _MainChatState extends State<_MainChat> {
                                       if (message.characters.isNotEmpty &&
                                           message.characters.last == '\n' &&
                                           !(RawKeyboard.instance.keysPressed
-                                                  .contains(
-                                                      const LogicalKeyboardKey(
-                                                          0x200000102)) ||
+                                                  .contains(const LogicalKeyboardKey(0x200000102)) ||
                                               RawKeyboard.instance.keysPressed
-                                                  .contains(
-                                                      const LogicalKeyboardKey(
-                                                          0x200000103)))) {
-                                        _controller.text = _controller.text
-                                            .substring(
-                                                0, _controller.text.length - 1);
+                                                  .contains(const LogicalKeyboardKey(0x200000103)))) {
+                                        _controller.text = _controller.text.substring(0, _controller.text.length - 1);
                                         _testMessage();
                                       }
                                     },
@@ -1268,8 +1220,7 @@ class _MainChatState extends State<_MainChat> {
                                 height: _fontSize * 0.36,
                                 width: constraints.maxWidth - 130,
                                 child: Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(15, 0, 0, 0),
+                                  padding: const EdgeInsets.fromLTRB(15, 0, 0, 0),
                                   child: ListView.separated(
                                     scrollDirection: Axis.horizontal,
                                     itemCount: _typingList.length,
@@ -1291,8 +1242,7 @@ class _MainChatState extends State<_MainChat> {
                                         fontFamily: _font,
                                         fontSize: _fontSize * 0.55,
                                         fontWeight: FontWeight.w900,
-                                        color: const Color.fromARGB(
-                                            255, 30, 55, 118),
+                                        color: const Color.fromARGB(255, 30, 55, 118),
                                       ),
                                     ),
                                   ),
@@ -1305,9 +1255,7 @@ class _MainChatState extends State<_MainChat> {
                                 ConstrainedBox(
                                   constraints: BoxConstraints(
                                     maxWidth: constraints.maxWidth - 130,
-                                    maxHeight:
-                                        MediaQuery.of(context).size.height *
-                                            0.3,
+                                    maxHeight: MediaQuery.of(context).size.height * 0.3,
                                   ),
                                   child: IntrinsicWidth(
                                     child: Stack(
@@ -1326,8 +1274,7 @@ class _MainChatState extends State<_MainChat> {
                                             child: const Icon(
                                               Icons.cancel_rounded,
                                               size: 40,
-                                              color: Color.fromARGB(
-                                                  255, 219, 14, 14),
+                                              color: Color.fromARGB(255, 219, 14, 14),
                                             ),
                                           ),
                                         ),
@@ -1341,15 +1288,12 @@ class _MainChatState extends State<_MainChat> {
                               mainAxisAlignment: MainAxisAlignment.start,
                               children: [
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
                                   child: MaterialButton(
                                     onPressed: _pasteImage,
                                     onLongPress: _selectImage,
                                     shape: const CircleBorder(),
-                                    color: ColorScheme.fromSeed(
-                                            seedColor: _neptuneColor)
-                                        .secondary,
+                                    color: ColorScheme.fromSeed(seedColor: _neptuneColor).secondary,
                                     height: 50,
                                     minWidth: 50,
                                     hoverColor: Colors.blue,
@@ -1368,9 +1312,7 @@ class _MainChatState extends State<_MainChat> {
                                   splashColor: Colors.lightBlue,
                                   hoverColor: Colors.blue,
                                   shape: const CircleBorder(),
-                                  color: ColorScheme.fromSeed(
-                                          seedColor: _neptuneColor)
-                                      .secondary,
+                                  color: ColorScheme.fromSeed(seedColor: _neptuneColor).secondary,
                                   height: 50,
                                   minWidth: 50,
                                   child: const Icon(Icons.send),

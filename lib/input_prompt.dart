@@ -1,21 +1,13 @@
+// Copyright Terry Hancock 2023
 import 'package:flutter/material.dart';
 
-class InputPrompt extends StatefulWidget {
+class InputPrompt extends StatelessWidget {
   final TextEditingController controller;
   final String formTitle;
   final void Function()? onSubmit;
 
-  const InputPrompt(
-      {super.key,
-      required this.controller,
-      required this.formTitle,
-      required this.onSubmit});
+  const InputPrompt({super.key, required this.controller, required this.formTitle, required this.onSubmit});
 
-  @override
-  State<InputPrompt> createState() => _InputPromptState();
-}
-
-class _InputPromptState extends State<InputPrompt> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -36,9 +28,9 @@ class _InputPromptState extends State<InputPrompt> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Enter ${widget.formTitle}:'),
+                    Text('Enter $formTitle:'),
                     TextField(
-                      controller: widget.controller,
+                      controller: controller,
                       decoration: const InputDecoration(
                         hintText: 'Type here...',
                       ),
@@ -47,7 +39,7 @@ class _InputPromptState extends State<InputPrompt> {
                     ),
                     const Spacer(),
                     MaterialButton(
-                      onPressed: widget.onSubmit,
+                      onPressed: onSubmit,
                       child: const Text('Submit'),
                     ),
                   ],
