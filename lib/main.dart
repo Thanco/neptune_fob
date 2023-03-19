@@ -311,7 +311,7 @@ class _MainChatState extends State<_MainChat> {
   }
 
   void _sendImageBytes(Uint8List bytes) async {
-    ChatItem item = ChatItem(-1, _userName, _currentChannel, 't', bytes);
+    ChatItem item = ChatItem(-1, _userName, _currentChannel, 'i', bytes);
     socket.emitWithBinary('image', item.toJson().toString());
   }
 
@@ -612,7 +612,10 @@ class _MainChatState extends State<_MainChat> {
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: ListView.builder(
+                    child: ListView.separated(
+                      separatorBuilder: (context, index) => const SizedBox(
+                        height: 5,
+                      ),
                       itemCount: _messageLists.entries.length + 1,
                       itemBuilder: (context, index) {
                         String text = '+ New Channel';
@@ -626,6 +629,7 @@ class _MainChatState extends State<_MainChat> {
                           shape: const RoundedRectangleBorder(
                             borderRadius: BorderRadius.all(Radius.circular(8.0)),
                           ),
+                          color: _currentChannel == text ? _neptuneColor : const Color(0x00000000),
                           onPressed: changeChannel,
                           child: Row(
                             children: [

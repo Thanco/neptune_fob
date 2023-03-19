@@ -32,7 +32,7 @@ class ChatItem extends Comparable<ChatItem> {
   dynamic contentToJson() {
     switch (type) {
       case 't':
-        return '"$content"';
+        return '"${content.toString().replaceAll("\"", "\\\"")}"';
       default:
         return content;
     }
