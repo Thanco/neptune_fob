@@ -500,8 +500,24 @@ class _MainChatState extends State<_MainChat> {
       return;
     }
     _imageBytes = await Pasteboard.image;
+    if (_imageBytes == null) {
+      List<String> files = await Pasteboard.files();
+      File file = File(files.single);
+      if (!_isStaticImage(file.path)) {
+        return;
+      }
+      _imageBytes = await file.readAsBytes();
+    }
     _imagePaste = true;
+
     setState(() {});
+  }
+
+  bool _isStaticImage(String filePath) {
+    if (filePath.endsWith('.png') || filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
+      return true;
+    }
+    return false;
   }
 
   void _selectImage() async {
@@ -549,6 +565,11 @@ class _MainChatState extends State<_MainChat> {
   }
 
   void _editMessage(int index) {
+    // ChatItem editItem = _messageLists[_currentChannel]!.firstWhere((element) => element.itemIndex == index);
+    ChatItem editItem = _messageLists[_currentChannel]![index];
+    if (editItem.userName != _userName) {
+      return;
+    }
     setState(() {
       _editingController.text = '';
       _editIndex = index;
@@ -1133,7 +1154,7 @@ class _MainChatState extends State<_MainChat> {
                               }
                               _editBtns.add(const SizedBox());
                               return MouseRegion(
-                                onEnter: (event) {
+                                onHover: (event) {
                                   setState(() {
                                     if (currentChat[index].type != 't' || currentChat[index].userName != _userName) {
                                       return;
@@ -1192,31 +1213,49 @@ class _MainChatState extends State<_MainChat> {
                                 width: constraints.maxWidth - 130,
                                 child: Padding(
                                   padding: const EdgeInsets.fromLTRB(10, 0, 0, 10),
-                                  child: TextFormField(
-                                    style: TextStyle(
-                                      fontFamily: _font,
-                                      fontSize: _fontSize,
-                                    ),
-                                    controller: _controller,
-                                    onFieldSubmitted: (message) {
-                                      _testMessage();
-                                    },
-                                    onChanged: (message) {
-                                      _thisClientTyping();
-                                      if (message.characters.isNotEmpty &&
-                                          message.characters.last == '\n' &&
-                                          !(RawKeyboard.instance.keysPressed
-                                                  .contains(const LogicalKeyboardKey(0x200000102)) ||
-                                              RawKeyboard.instance.keysPressed
-                                                  .contains(const LogicalKeyboardKey(0x200000103)))) {
-                                        _controller.text = _controller.text.substring(0, _controller.text.length - 1);
+                                  child: RawKeyboardListener(
+                                    focusNode: FocusNode(),
+                                    onKey: (RawKeyEvent event) {
+                                      // print(event.isKeyPressed(LogicalKeyboardKey.enter));
+                                      if ((event.isKeyPressed(LogicalKeyboardKey.enter) ||
+                                              event.isKeyPressed(LogicalKeyboardKey.numpadEnter)) &&
+                                          !event.isShiftPressed) {
+                                        if (_controller.text == '\n\r') {
+                                          return;
+                                        }
                                         _testMessage();
                                       }
                                     },
-                                    onEditingComplete: () => _testMessage(),
-                                    minLines: 1,
-                                    maxLines: 20,
-                                    autofocus: true,
+                                    child: TextFormField(
+                                      style: TextStyle(
+                                        fontFamily: _font,
+                                        fontSize: _fontSize,
+                                      ),
+                                      controller: _controller,
+                                      onFieldSubmitted: (message) {
+                                        _testMessage();
+                                      },
+                                      // textInputAction: TextInputAction.done,
+                                      onChanged: (message) {
+                                        _thisClientTyping();
+                                        if (_controller.text == '\n') {
+                                          _controller.text = '';
+                                        }
+                                        //   if (message.characters.isNotEmpty &&
+                                        //       message.characters.last == '\n' &&
+                                        //       !(RawKeyboard.instance.keysPressed
+                                        //               .contains(const LogicalKeyboardKey(0x200000102)) ||
+                                        //           RawKeyboard.instance.keysPressed
+                                        //               .contains(const LogicalKeyboardKey(0x200000103)))) {
+                                        //     _controller.text = _controller.text.substring(0, _controller.text.length - 1);
+                                        //     _testMessage();
+                                        //   }
+                                      },
+                                      onEditingComplete: () => _testMessage(),
+                                      minLines: 1,
+                                      maxLines: 20,
+                                      autofocus: true,
+                                    ),
                                   ),
                                 ),
                               ),
