@@ -1,0 +1,13 @@
+//Copyright Terry Hancock 2023
+
+import 'package:audioplayers/audioplayers.dart';
+
+class SoundHandler {
+  static final AudioPlayer audio = AudioPlayer();
+
+  static void play() => audio.play(
+        AssetSource('message.mp3'),
+        volume: .25,
+        mode: PlayerMode.lowLatency,
+      );
+}

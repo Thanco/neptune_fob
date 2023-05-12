@@ -1,18 +1,18 @@
 // Copyright Terry Hancock 2023
-class ChatItem extends Comparable<ChatItem> {
+
+import 'package:flutter/material.dart';
+import 'package:neptune_fob/ui/chat_item_test.dart';
+
+class ChatItem with Comparable<ChatItem> {
   final int itemIndex;
   final String userName;
   final String channel;
   final String type;
   final dynamic content;
+  late final ChatItemTest itemWidget = ChatItemTest(this);
+  Widget editBtn = const SizedBox();
 
-  ChatItem(
-    this.itemIndex,
-    this.userName,
-    this.channel,
-    this.type,
-    this.content,
-  );
+  ChatItem(this.itemIndex, this.userName, this.channel, this.type, this.content);
 
   ChatItem.fromJson(Map<String, dynamic> json)
       : itemIndex = json['itemIndex'],
@@ -40,6 +40,7 @@ class ChatItem extends Comparable<ChatItem> {
 
   @override
   int compareTo(ChatItem other) {
-    return other.itemIndex - itemIndex;
+    // return other.itemIndex - itemIndex;
+    return itemIndex - other.itemIndex;
   }
 }
