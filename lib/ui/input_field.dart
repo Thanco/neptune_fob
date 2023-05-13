@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/client_typing_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
 import 'package:neptune_fob/data/text_style_handler.dart';
@@ -91,134 +92,136 @@ class _InputFieldState extends State<InputField> {
           topRight: Radius.circular(16),
         ),
       ),
-      child: LayoutBuilder(
-        builder: (buildContext, constraints) {
-          List<Widget> inputColumn = [];
-          inputColumn = [
-            SizedBox(
-              width: constraints.maxWidth - 130,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 0, 0, 10),
-                child: RawKeyboardListener(
-                  focusNode: FocusNode(),
-                  onKey: (RawKeyEvent event) {
-                    // print(event.isKeyPressed(LogicalKeyboardKey.enter));
-                    if ((event.isKeyPressed(LogicalKeyboardKey.enter) ||
-                            event.isKeyPressed(LogicalKeyboardKey.numpadEnter)) &&
-                        !event.isShiftPressed) {
-                      if (_controller.text == '\n\r') {
-                        return;
-                      }
-                      _testMessage();
-                    }
-                  },
-                  child: Consumer<TextStyleHandler>(
-                    builder: (context, textStyleHandler, child) => TextFormField(
-                      style: TextStyle(
-                        fontFamily: textStyleHandler.font,
-                        fontSize: textStyleHandler.fontSize,
-                      ),
-                      controller: _controller,
-                      onFieldSubmitted: (message) {
-                        _testMessage();
-                      },
-                      onChanged: (message) {
-                        ClientTypingHandler().thisClientTyping();
-                        if (_controller.text == '\n') {
-                          _controller.text = '';
+      child: Consumer<ChatHandler>(
+        builder: (context, value, child) => LayoutBuilder(
+          builder: (buildContext, constraints) {
+            List<Widget> inputColumn = [];
+            inputColumn = [
+              SizedBox(
+                width: constraints.maxWidth - 130,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 0, 0, 10),
+                  child: RawKeyboardListener(
+                    focusNode: FocusNode(),
+                    onKey: (RawKeyEvent event) {
+                      // print(event.isKeyPressed(LogicalKeyboardKey.enter));
+                      if ((event.isKeyPressed(LogicalKeyboardKey.enter) ||
+                              event.isKeyPressed(LogicalKeyboardKey.numpadEnter)) &&
+                          !event.isShiftPressed) {
+                        if (_controller.text == '\n\r') {
+                          return;
                         }
-                      },
-                      onEditingComplete: () => _testMessage(),
-                      minLines: 1,
-                      maxLines: 20,
-                      autofocus: true,
+                        _testMessage();
+                      }
+                    },
+                    child: Consumer<TextStyleHandler>(
+                      builder: (context, textStyleHandler, child) => TextFormField(
+                        style: TextStyle(
+                          fontFamily: textStyleHandler.font,
+                          fontSize: textStyleHandler.fontSize,
+                        ),
+                        controller: _controller,
+                        onFieldSubmitted: (message) {
+                          _testMessage();
+                        },
+                        onChanged: (message) {
+                          ClientTypingHandler().thisClientTyping();
+                          if (_controller.text == '\n') {
+                            _controller.text = '';
+                          }
+                        },
+                        onEditingComplete: () => _testMessage(),
+                        minLines: 1,
+                        maxLines: 20,
+                        autofocus: true,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            Consumer<TextStyleHandler>(
-              builder: (context, textStyleHandler, child) => SizedBox(
-                height: textStyleHandler.fontSize * 0.36,
-                width: constraints.maxWidth - 130,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(15, 0, 0, 0),
-                  child: TypingStatus(constraints.maxWidth - 130),
-                ),
-              ),
-            ),
-          ];
-          if (_imagePaste) {
-            inputColumn.insert(
-              0,
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: constraints.maxWidth - 130,
-                  maxHeight: MediaQuery.of(context).size.height * 0.3,
-                ),
-                child: IntrinsicWidth(
-                  child: Stack(
-                    children: [
-                      Image.memory(_imageBytes!),
-                      Align(
-                        alignment: Alignment.topRight,
-                        child: MaterialButton(
-                          height: 40,
-                          minWidth: 40,
-                          shape: const CircleBorder(),
-                          onPressed: () => {
-                            _imagePaste = false,
-                            setState(() {}),
-                          },
-                          child: const Icon(
-                            Icons.cancel_rounded,
-                            size: 40,
-                            color: Color.fromARGB(255, 219, 14, 14),
-                          ),
-                        ),
-                      ),
-                    ],
+              Consumer<TextStyleHandler>(
+                builder: (context, textStyleHandler, child) => SizedBox(
+                  height: textStyleHandler.fontSize * 0.36,
+                  width: constraints.maxWidth - 130,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(15, 0, 0, 0),
+                    child: TypingStatus(constraints.maxWidth - 130),
                   ),
                 ),
               ),
-            );
-          }
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: MaterialButton(
-                  onPressed: _pasteImage,
-                  onLongPress: _selectImage,
+            ];
+            if (_imagePaste) {
+              inputColumn.insert(
+                0,
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: constraints.maxWidth - 130,
+                    maxHeight: MediaQuery.of(context).size.height * 0.3,
+                  ),
+                  child: IntrinsicWidth(
+                    child: Stack(
+                      children: [
+                        Image.memory(_imageBytes!),
+                        Align(
+                          alignment: Alignment.topRight,
+                          child: MaterialButton(
+                            height: 40,
+                            minWidth: 40,
+                            shape: const CircleBorder(),
+                            onPressed: () => {
+                              _imagePaste = false,
+                              setState(() {}),
+                            },
+                            child: const Icon(
+                              Icons.cancel_rounded,
+                              size: 40,
+                              color: Color.fromARGB(255, 219, 14, 14),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: MaterialButton(
+                    onPressed: _pasteImage,
+                    onLongPress: _selectImage,
+                    shape: const CircleBorder(),
+                    color: ColorScheme.fromSeed(seedColor: NeptuneFOB.color).secondary,
+                    height: 50,
+                    minWidth: 50,
+                    hoverColor: Colors.blue,
+                    child: const Icon(Icons.add_sharp),
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: inputColumn,
+                ),
+                const SizedBox(
+                  width: 10,
+                ),
+                MaterialButton(
+                  onPressed: _testMessage,
+                  splashColor: Colors.lightBlue,
+                  hoverColor: Colors.blue,
                   shape: const CircleBorder(),
                   color: ColorScheme.fromSeed(seedColor: NeptuneFOB.color).secondary,
                   height: 50,
                   minWidth: 50,
-                  hoverColor: Colors.blue,
-                  child: const Icon(Icons.add_sharp),
+                  child: const Icon(Icons.send),
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: inputColumn,
-              ),
-              const SizedBox(
-                width: 10,
-              ),
-              MaterialButton(
-                onPressed: _testMessage,
-                splashColor: Colors.lightBlue,
-                hoverColor: Colors.blue,
-                shape: const CircleBorder(),
-                color: ColorScheme.fromSeed(seedColor: NeptuneFOB.color).secondary,
-                height: 50,
-                minWidth: 50,
-                child: const Icon(Icons.send),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }

@@ -69,7 +69,7 @@ class ChatHandler with ChangeNotifier {
 
   void _newMessage(String channel) {
     if (channel == _currentChannel) {
-      if (controller.position.pixels > controller.position.maxScrollExtent - 100) {
+      if (controller.position.pixels > controller.position.maxScrollExtent - 500) {
         _scrollToEnd();
       }
       return;
@@ -140,5 +140,6 @@ class ChatHandler with ChangeNotifier {
     _removeNewMessage(newChannel);
     _currentChannel = newChannel;
     notifyListeners();
+    _scrollToEnd();
   }
 }
