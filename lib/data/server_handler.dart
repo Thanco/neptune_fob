@@ -17,7 +17,7 @@ class ServerHandler with ChangeNotifier {
 
   void addServer() {
     _serverList.removeWhere((element) => element == '');
-    String uri = SocketHandler().uri;
+    final String uri = SocketHandler().uri;
     if (uri.isEmpty) {
       return;
     }
@@ -35,7 +35,7 @@ class ServerHandler with ChangeNotifier {
 
   void setServerItems() {
     _serverItemList.clear();
-    List<String> serverList = ServerHandler().serverList;
+    final List<String> serverList = ServerHandler().serverList;
     for (var i = serverList.length - 1; i >= 0; i--) {
       _serverItemList.add(
         DropdownMenuItem(

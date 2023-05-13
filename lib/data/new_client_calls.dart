@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
 import 'package:neptune_fob/ui/input_prompt.dart';
 
-abstract class NewClientCalls {
-  static bool newClient = true;
+class NewClientCalls {
+  bool _newClient = true;
+  bool get newClient => _newClient;
 
-  static void newClientCalls(BuildContext context) {
-    SocketHandler socket = SocketHandler();
-    if (newClient) {
+  void newClientCalls(BuildContext context) {
+    final SocketHandler socket = SocketHandler();
+    if (_newClient) {
       if (socket.userName.isEmpty) {
         WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
           changeUserName(context);
@@ -18,11 +19,11 @@ abstract class NewClientCalls {
           changeServerAddress(context);
         });
       }
-      newClient = false;
+      _newClient = false;
     }
   }
 
-  static void changeUserName(BuildContext context) {
+  void changeUserName(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (BuildContext context) {
@@ -43,7 +44,7 @@ abstract class NewClientCalls {
     );
   }
 
-  static void changeServerAddress(BuildContext context) {
+  void changeServerAddress(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (BuildContext context) {
@@ -55,7 +56,7 @@ abstract class NewClientCalls {
               if (!controller.text.startsWith('http://')) {
                 controller.text = 'http://${controller.text}/';
               }
-              SocketHandler socket = SocketHandler();
+              final SocketHandler socket = SocketHandler();
               if (socket.connected) {
                 socket.disconnect();
               }

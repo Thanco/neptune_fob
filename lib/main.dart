@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/chat_handler.dart';
+import 'package:neptune_fob/data/new_client_calls.dart';
 import 'package:neptune_fob/data/settings_handler.dart';
 import 'package:neptune_fob/data/text_style_handler.dart';
 import 'package:neptune_fob/data/user_handler.dart';
@@ -22,7 +23,7 @@ void main() {
 class NeptuneFOB extends StatelessWidget {
   const NeptuneFOB({super.key});
 
-  static Color color = const Color.fromARGB(255, 68, 99, 179);
+  static const Color color = Color.fromARGB(255, 68, 99, 179);
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -69,8 +70,17 @@ class _MainChatState extends State<_MainChat> {
 
   @override
   void initState() {
+    final NewClientCalls caller = NewClientCalls();
+    if (caller.newClient) {
+      SettingsHandler();
+      WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+        caller.newClientCalls(context);
+      });
+    }
+
     _flips.add(_toggleServers);
     _flips.add(_toggleUsers);
+
     super.initState();
   }
 
@@ -115,9 +125,9 @@ class _MainChatState extends State<_MainChat> {
                   flex: 16,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
-                    children: const [
+                    children: [
                       ChatList(),
-                      InputField(),
+                      const InputField(),
                     ],
                   ),
                 ),

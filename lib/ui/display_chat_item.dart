@@ -14,8 +14,9 @@ class DisplayChat extends StatefulWidget {
   State<DisplayChat> createState() => _DisplayChatState();
 }
 
-class _DisplayChatState extends State<DisplayChat> {
-  final List<ChatItem> currentChat = ChatHandler().getMessages('');
+class _DisplayChatState extends State<DisplayChat> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
 
   void _editMessage() {
     // ChatItem editItem = _messageLists[_currentChannel]!.firstWhere((element) => element.itemIndex == index);
@@ -30,6 +31,7 @@ class _DisplayChatState extends State<DisplayChat> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return MouseRegion(
       onHover: (event) {
         if (widget.item.type != 't' || widget.item.userName != SocketHandler().userName) {

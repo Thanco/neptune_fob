@@ -20,7 +20,7 @@ class _ServerListState extends State<ServerList> {
       DialogRoute<void>(
         context: context,
         builder: (BuildContext context) {
-          TextEditingController controller = TextEditingController();
+          final TextEditingController controller = TextEditingController();
           return InputPrompt(
             controller: controller,
             formTitle: 'New Channel',
@@ -55,7 +55,7 @@ class _ServerListState extends State<ServerList> {
               setState(() {});
             };
           }
-          bool newMessage = index < _messages.getChannels().length && _messages.hasNewMessage(channel);
+          final bool newMessage = index < _messages.getChannels().length && _messages.hasNewMessage(channel);
           return MaterialButton(
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.all(Radius.circular(8.0)),

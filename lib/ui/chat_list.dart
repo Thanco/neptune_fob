@@ -2,72 +2,88 @@
 
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/chat_handler.dart';
-import 'package:neptune_fob/data/new_client_calls.dart';
-import 'package:neptune_fob/data/settings_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
+import 'package:neptune_fob/ui/chat_item.dart';
 import 'package:neptune_fob/ui/display_chat_item.dart';
 import 'package:neptune_fob/ui/editing_chat.dart';
 import 'package:provider/provider.dart';
 
-class ChatList extends StatefulWidget {
-  const ChatList({super.key});
-
-  @override
-  State<ChatList> createState() => _ChatListState();
-}
-
-class _ChatListState extends State<ChatList> {
+class ChatList extends StatelessWidget {
   final ScrollController controller = ChatHandler().controller;
-  List<DisplayChat> displayList = [];
-
-  @override
-  void initState() {
-    controller.addListener(() => _scrollActions());
-
-    super.initState();
-  }
+  final List<DisplayChat> displayList = [];
 
   void _scrollActions() {
-    if (controller.position.pixels == controller.position.minScrollExtent) {
+    if (controller.position.pixels == controller.position.maxScrollExtent) {
       SocketHandler().requestMore();
-      WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-        controller.position
-            .animateTo(controller.position.pixels + 1, duration: const Duration(microseconds: 1), curve: Curves.linear);
-      });
+      // WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      //   controller.position
+      //       .animateTo(controller.position.pixels + 1, duration: const Duration(microseconds: 1), curve: Curves.linear);
+      // });
     }
+  }
+
+  ChatList({super.key}) {
+    controller.addListener(() => _scrollActions());
   }
 
   @override
   Widget build(BuildContext context) {
-    if (NewClientCalls.newClient) {
-      SettingsHandler();
-      WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-        NewClientCalls.newClientCalls(context);
-      });
-    }
-
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         child: Consumer<ChatHandler>(
-          builder: (context, chatHandler, child) => SizedBox(
-            height: MediaQuery.of(context).size.height,
-            width: MediaQuery.of(context).size.width,
-            child: ListView.separated(
-              clipBehavior: Clip.none,
-              controller: ChatHandler().controller,
-              padding: const EdgeInsets.symmetric(),
-              shrinkWrap: true,
-              itemCount: chatHandler.getMessages('').length,
-              itemBuilder: ((context, index) {
-                if (chatHandler.getMessages('')[index].itemIndex == ChatHandler().editIndex) {
-                  return EditingChat(chatHandler.getMessages('')[index]);
-                }
-                return DisplayChat(chatHandler.getMessages('')[index]);
-              }),
-              separatorBuilder: (context, index) => const Divider(),
-            ),
-          ),
+          builder: (context, chatHandler, child) {
+            final List<ChatItem> currentList = chatHandler.getMessages('');
+            // int chatLength = currentList.length;
+
+            // return ListView.separated(
+            //   clipBehavior: Clip.none,
+            //   // reverse: true,
+            //   controller: controller,
+            //   // padding: const EdgeInsets.symmetric(),
+            //   shrinkWrap: true,
+            //   itemCount: chatLength,
+            //   itemBuilder: ((context, index) {
+            //     // final int correctedIndex = chatLength - (index + 1);
+            //     int correctedIndex = index;
+            //     ChatItem item = currentList[correctedIndex];
+            //     if (item.itemIndex == ChatHandler().editIndex) {
+            //       return EditingChat(item);
+            //     }
+            //     return DisplayChat(
+            //       item,
+            //       // key: ValueKey<ChatItem>(item),
+            //     );
+            //   }),
+            //   // findChildIndexCallback: (Key key) {
+            //   //   ValueKey<ChatItem> valueKey = key as ValueKey<ChatItem>;
+            //   //   int index = currentList.indexWhere((element) => element.itemIndex == valueKey.value.itemIndex);
+            //   //   if (index == -1) return null;
+            //   //   return;
+            //   // },
+            //   separatorBuilder: (context, index) => const Divider(),
+            // );
+
+            final List<Widget> list = [];
+            for (ChatItem item in currentList) {
+              list.add(const Divider());
+              if (item.itemIndex == ChatHandler().editIndex) {
+                list.add(EditingChat(item));
+                continue;
+              }
+              list.add(DisplayChat(item));
+            }
+
+            return SingleChildScrollView(
+              controller: controller,
+              reverse: true,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: list,
+              ),
+            );
+          },
         ),
       ),
     );

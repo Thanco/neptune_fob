@@ -113,8 +113,8 @@ class ChatItemTest extends StatelessWidget {
           break;
         }
         if (item.content.contains('http')) {
-          List<Widget> newWidgets = [];
-          List<String> split = item.content.split(' ');
+          final List<Widget> newWidgets = [];
+          final List<String> split = item.content.split(' ');
           String plainText = '';
           for (int i = 0; i < split.length; i++) {
             if (split[i].contains('http')) {
@@ -185,7 +185,7 @@ class ChatItemTest extends StatelessWidget {
         );
         break;
       case 'i':
-        Uint8List bytes = item.content;
+        final Uint8List bytes = item.content;
         newRow.children.add(
           Flexible(
             child: ConstrainedBox(

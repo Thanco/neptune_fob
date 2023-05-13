@@ -95,8 +95,7 @@ class _InputFieldState extends State<InputField> {
       child: Consumer<ChatHandler>(
         builder: (context, value, child) => LayoutBuilder(
           builder: (buildContext, constraints) {
-            List<Widget> inputColumn = [];
-            inputColumn = [
+            final List<Widget> inputColumn = [
               SizedBox(
                 width: constraints.maxWidth - 130,
                 child: Padding(

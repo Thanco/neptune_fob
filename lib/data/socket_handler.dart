@@ -13,6 +13,7 @@ class SocketHandler {
   static final SocketHandler _instance = SocketHandler._constructor();
   late Socket _socket;
   String userName = '';
+  bool _currentlyRequesting = false;
 
   String get uri => _socket.io.uri;
   set uri(String uri) {
@@ -61,9 +62,13 @@ class SocketHandler {
         TypingHandler().userNoLongerTyping(newMessage.userName);
       },
     );
-    _socket.on('backlogFill', (itemJson) {
-      ChatItem backlogMessage = ChatItem.fromJson(itemJson);
-      ChatHandler().addChatItem(backlogMessage);
+    _socket.on('backlogFill', (itemListJson) {
+      List<ChatItem> backlogItems = [];
+      for (int i = 0; i < itemListJson.length; i++) {
+        backlogItems.add(ChatItem.fromJson(itemListJson[i]));
+      }
+      ChatHandler().addChatItems(backlogItems);
+      _currentlyRequesting = false;
     });
     _socket.on('image', (imageMessage) {
       ChatItem newImage = ChatItem.fromJson(imageMessage.first);
@@ -78,6 +83,7 @@ class SocketHandler {
 
       // ack response
       imageMessage.last(null);
+      _currentlyRequesting = false;
     });
     _socket.on('usernameSend', (clientUserName) {
       userName = clientUserName;
@@ -115,19 +121,19 @@ class SocketHandler {
   }
 
   void submitEdit(int editIndex, String editText) {
-    ChatHandler messages = ChatHandler();
-    ChatItem? initialItem = messages.getItem(messages.getCurrentChannel(), editIndex);
+    final ChatHandler messages = ChatHandler();
+    final ChatItem? initialItem = messages.getItem(messages.getCurrentChannel(), editIndex);
     if (initialItem == null) {
       return;
     }
-    ChatItem editItem =
+    final ChatItem editItem =
         ChatItem(initialItem.itemIndex, initialItem.userName, initialItem.channel, initialItem.type, editText);
     _socket.emit('edit', editItem.toJson().toString());
   }
 
   void requestDelete(int editIndex) {
-    ChatHandler messages = ChatHandler();
-    ChatItem? deleteItem = messages.getItem(messages.getCurrentChannel(), editIndex);
+    final ChatHandler messages = ChatHandler();
+    final ChatItem? deleteItem = messages.getItem(messages.getCurrentChannel(), editIndex);
     if (deleteItem == null) {
       return;
     }
@@ -143,7 +149,7 @@ class SocketHandler {
   }
 
   void sendMessage(String message) {
-    ChatItem item = ChatItem(-1, userName, ChatHandler().getCurrentChannel(), 't', message);
+    final ChatItem item = ChatItem(-1, userName, ChatHandler().getCurrentChannel(), 't', message);
     _socket.emit('chatMessage', item.toJson().toString());
   }
 
@@ -152,21 +158,29 @@ class SocketHandler {
   }
 
   void sendImageFile(String path) async {
-    File file = File(path);
-    Uint8List bytes = await _getImage(file);
+    final File file = File(path);
+    final Uint8List bytes = await _getImage(file);
     sendImageBytes(bytes);
   }
 
   void sendImageBytes(Uint8List bytes) async {
-    ChatItem item = ChatItem(-1, userName, ChatHandler().getCurrentChannel(), 'i', bytes);
+    final ChatItem item = ChatItem(-1, userName, ChatHandler().getCurrentChannel(), 'i', bytes);
     _socket.emitWithBinary('image', item.toJson().toString());
   }
 
   void requestMore() {
-    ChatHandler chatHandler = ChatHandler();
-    ChatItem item = ChatItem(chatHandler.getOldestItemIndex(chatHandler.getCurrentChannel()), userName,
+    if (_currentlyRequesting) {
+      return;
+    }
+    _currentlyRequesting = true;
+    final ChatHandler chatHandler = ChatHandler();
+    final ChatItem item = ChatItem(chatHandler.getOldestItemIndex(chatHandler.getCurrentChannel()), userName,
         chatHandler.getCurrentChannel(), 'r', null);
     _socket.emit('messageRequest', item.toJson().toString());
+  }
+
+  void resetRequesting() {
+    _currentlyRequesting = false;
   }
 
   void sendTypingPing() {

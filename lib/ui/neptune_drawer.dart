@@ -136,7 +136,7 @@ class _NeptuneDrawerState extends State<NeptuneDrawer> {
                     ),
                     const Spacer(),
                     MaterialButton(
-                      onPressed: () => NewClientCalls.changeUserName(context),
+                      onPressed: () => NewClientCalls().changeUserName(context),
                       minWidth: 25,
                       color: NeptuneFOB.color,
                       hoverColor: Colors.amber,
@@ -178,7 +178,7 @@ class _NeptuneDrawerState extends State<NeptuneDrawer> {
               ),
               Center(
                 child: MaterialButton(
-                  onPressed: () => NewClientCalls.changeServerAddress(context),
+                  onPressed: () => NewClientCalls().changeServerAddress(context),
                   minWidth: 25,
                   color: NeptuneFOB.color,
                   hoverColor: Colors.amber,

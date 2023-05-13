@@ -15,12 +15,12 @@ class ChatHandler with ChangeNotifier {
 
   ChatHandler._constructor();
 
-  void _scrollToEnd() {
-    WidgetsBinding.instance.addPostFrameCallback(
-      (timeStamp) => controller.animateTo(controller.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 50), curve: Curves.linear),
-    );
-  }
+  // void _scrollToEnd() {
+  //   WidgetsBinding.instance.addPostFrameCallback(
+  //     (timeStamp) => controller.animateTo(controller.position.maxScrollExtent,
+  //         duration: const Duration(milliseconds: 50), curve: Curves.linear),
+  //   );
+  // }
 
   factory ChatHandler() {
     return _instance;
@@ -44,6 +44,24 @@ class ChatHandler with ChangeNotifier {
     _messageListNews.putIfAbsent(item.channel, () => false);
     _messageLists[item.channel]!.add(item);
     _verifyMessageOrder(item.channel);
+    notifyListeners();
+  }
+
+  void addChatItems(List<ChatItem> items) {
+    Map<String, List<ChatItem>> channels = {};
+    for (var i = 0; i < items.length; i++) {
+      final ChatItem item = items[i];
+      channels.putIfAbsent(item.channel, () => []);
+      channels[item.channel]!.add(item);
+    }
+    for (var i = 0; i < channels.length; i++) {
+      final String channel = channels.keys.elementAt(i);
+      _messageLists.putIfAbsent(channel, () => []);
+      _messageListNews.putIfAbsent(channel, () => false);
+      _messageLists[channel]!.addAll(channels[channel]!);
+      _verifyMessageOrder(channel);
+    }
+    notifyListeners();
   }
 
   void addNewChatItem(ChatItem item) {
@@ -58,20 +76,19 @@ class ChatHandler with ChangeNotifier {
     if (_messageLists[channel] != null) {
       _messageLists[channel]!.sort();
     }
-    List<ChatItem> items = _messageLists[channel]!;
+    final List<ChatItem> items = _messageLists[channel]!;
     for (var i = 1; i < items.length; i++) {
       if (items[i - 1].itemIndex == items[i].itemIndex) {
         items.remove(items[i - 1]);
       }
     }
-    notifyListeners();
   }
 
   void _newMessage(String channel) {
     if (channel == _currentChannel) {
-      if (controller.position.pixels > controller.position.maxScrollExtent - 500) {
-        _scrollToEnd();
-      }
+      // if (controller.position.pixels > controller.position.maxScrollExtent - 500) {
+      //   _scrollToEnd();
+      // }
       return;
     }
     _messageListNews[channel] = true;
@@ -102,6 +119,7 @@ class ChatHandler with ChangeNotifier {
     _messageLists[editItem.channel]!.removeWhere((element) => element.itemIndex == editItem.itemIndex);
     _messageLists[editItem.channel]!.add(editItem);
     _verifyMessageOrder(editItem.channel);
+    notifyListeners();
   }
 
   void deleteItem(ChatItem deleteItem) {
@@ -137,9 +155,13 @@ class ChatHandler with ChangeNotifier {
   }
 
   void changeChannel(String newChannel) {
+    SocketHandler().resetRequesting();
+    if (newChannel == _currentChannel) {
+      return;
+    }
     _removeNewMessage(newChannel);
     _currentChannel = newChannel;
     notifyListeners();
-    _scrollToEnd();
+    // _scrollToEnd();
   }
 }

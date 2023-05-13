@@ -21,9 +21,9 @@ class SettingsHandler {
     if ((await BiometricStorage().canAuthenticate()) != CanAuthenticateResponse.success) {
       // TODO bro idk tbh
     }
-    BiometricStorageFile settingsStore = await BiometricStorage().getStorage('settings');
-    String? settingsJson = await settingsStore.read();
-    Map settings = jsonDecode(settingsJson!);
+    final BiometricStorageFile settingsStore = await BiometricStorage().getStorage('settings');
+    final String? settingsJson = await settingsStore.read();
+    final Map settings = jsonDecode(settingsJson!);
     SocketHandler().uri = settings['currentServer'];
     if (!SocketHandler().connected && SocketHandler().uri.isNotEmpty) {
       SocketHandler().connect();
@@ -33,7 +33,7 @@ class SettingsHandler {
     TextStyleHandler().fontSize = settings['fontSize'];
     String serverListJson = settings['serverList'];
     serverListJson = serverListJson.substring(1, (serverListJson.length - 1));
-    List<String> servers = serverListJson.split(", ");
+    final List<String> servers = serverListJson.split(", ");
     for (int i = 0; i < servers.length; i++) {
       if (!ServerHandler().serverList.contains(servers[i]) && !(servers[i] == '')) {
         ServerHandler().serverList.add(servers[i]);
@@ -43,14 +43,14 @@ class SettingsHandler {
   }
 
   void saveSettings() async {
-    Map settings = {
+    final Map settings = {
       '"currentServer"': '"${SocketHandler().uri}"',
       '"username"': '"${SocketHandler().userName}"',
       '"font"': '"${TextStyleHandler().font}"',
       '"fontSize"': TextStyleHandler().fontSize,
       '"serverList"': '"${ServerHandler().serverList.toString()}"',
     };
-    BiometricStorageFile settingsStore = await BiometricStorage().getStorage(
+    final BiometricStorageFile settingsStore = await BiometricStorage().getStorage(
       'settings',
       options: StorageFileInitOptions(
         authenticationRequired: false,
