@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
@@ -14,62 +16,66 @@ class DisplayChat extends StatefulWidget {
   State<DisplayChat> createState() => _DisplayChatState();
 }
 
-class _DisplayChatState extends State<DisplayChat> with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
+class _DisplayChatState extends State<DisplayChat> {
   void _editMessage() {
-    // ChatItem editItem = _messageLists[_currentChannel]!.firstWhere((element) => element.itemIndex == index);
     if (widget.item.userName != SocketHandler().userName) {
       return;
     }
-    setState(() {
-      // _editingController.text = '';
-      ChatHandler().changeEditIndex(widget.item.itemIndex);
-    });
+    ChatHandler().changeEditIndex(widget.item.itemIndex);
+  }
+
+  void _showEditButton() {
+    if (widget.item.type != 't' || widget.item.userName != SocketHandler().userName) {
+      return;
+    }
+    widget.item.editBtn = TextButton(
+      style: const ButtonStyle(
+        minimumSize: MaterialStatePropertyAll(Size(0, 0)),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onPressed: () => _editMessage(),
+      child: Consumer<TextStyleHandler>(
+        builder: (context, textStyleHandler, child) => Text(
+          'Edit',
+          style: TextStyle(
+            fontSize: textStyleHandler.fontSize,
+            fontFamily: textStyleHandler.font,
+          ),
+        ),
+      ),
+    );
+    setState(() {});
+  }
+
+  void _hideEditButton() {
+    widget.item.editBtn = const SizedBox();
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-    return MouseRegion(
-      onHover: (event) {
-        if (widget.item.type != 't' || widget.item.userName != SocketHandler().userName) {
-          return;
-        }
-        widget.item.editBtn = TextButton(
-          style: const ButtonStyle(
-            minimumSize: MaterialStatePropertyAll(Size(0, 0)),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          onPressed: () => _editMessage(),
-          child: Consumer<TextStyleHandler>(
-            builder: (context, textStyleHandler, child) => Text(
-              'Edit',
-              style: TextStyle(
-                fontSize: textStyleHandler.fontSize,
-                fontFamily: textStyleHandler.font,
-              ),
-            ),
-          ),
-        );
-        setState(() {});
-      },
-      onExit: (event) {
-        widget.item.editBtn = const SizedBox();
-        setState(() {});
-      },
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Flexible(child: widget.item.itemWidget),
-          widget.item.editBtn,
-          const SizedBox(
-            width: 15,
-          )
-        ],
-      ),
+    Row child = Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Flexible(child: widget.item.itemWidget),
+        widget.item.editBtn,
+        const SizedBox(
+          width: 15,
+        ),
+      ],
+    );
+    if (Platform.isWindows) {
+      return MouseRegion(
+        onHover: (event) => _showEditButton(),
+        onExit: (event) => _hideEditButton(),
+        child: child,
+      );
+    }
+    return GestureDetector(
+      onDoubleTap: () => _editMessage(),
+      behavior: HitTestBehavior.opaque,
+      child: child,
     );
   }
 }

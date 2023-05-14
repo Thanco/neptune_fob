@@ -35,7 +35,7 @@ class InputPrompt extends StatelessWidget {
                         hintText: 'Type here...',
                       ),
                       textAlign: TextAlign.center,
-                      onSubmitted: (value) => {},
+                      onSubmitted: (value) => onSubmit,
                     ),
                     const Spacer(),
                     MaterialButton(

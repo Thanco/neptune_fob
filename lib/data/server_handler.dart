@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
 
-class ServerHandler with ChangeNotifier {
+class ServerHandler {
   static final ServerHandler _instance = ServerHandler._constructor();
   final List<String> _serverList = [];
   final List<DropdownMenuItem<String>> _serverItemList = [];
@@ -44,6 +44,5 @@ class ServerHandler with ChangeNotifier {
         ),
       );
     }
-    notifyListeners();
   }
 }

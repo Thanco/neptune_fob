@@ -104,7 +104,8 @@ class _InputFieldState extends State<InputField> {
                     focusNode: FocusNode(),
                     onKey: (RawKeyEvent event) {
                       // print(event.isKeyPressed(LogicalKeyboardKey.enter));
-                      if ((event.isKeyPressed(LogicalKeyboardKey.enter) ||
+                      if (!Platform.isAndroid &&
+                          (event.isKeyPressed(LogicalKeyboardKey.enter) ||
                               event.isKeyPressed(LogicalKeyboardKey.numpadEnter)) &&
                           !event.isShiftPressed) {
                         if (_controller.text == '\n\r') {
@@ -114,13 +115,13 @@ class _InputFieldState extends State<InputField> {
                       }
                     },
                     child: Consumer<TextStyleHandler>(
-                      builder: (context, textStyleHandler, child) => TextFormField(
+                      builder: (context, textStyleHandler, child) => TextField(
                         style: TextStyle(
                           fontFamily: textStyleHandler.font,
                           fontSize: textStyleHandler.fontSize,
                         ),
                         controller: _controller,
-                        onFieldSubmitted: (message) {
+                        onSubmitted: (message) {
                           _testMessage();
                         },
                         onChanged: (message) {
@@ -133,6 +134,7 @@ class _InputFieldState extends State<InputField> {
                         minLines: 1,
                         maxLines: 20,
                         autofocus: true,
+                        textInputAction: TextInputAction.newline,
                       ),
                     ),
                   ),

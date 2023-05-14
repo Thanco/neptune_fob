@@ -70,13 +70,7 @@ class _MainChatState extends State<_MainChat> {
 
   @override
   void initState() {
-    final NewClientCalls caller = NewClientCalls();
-    if (caller.newClient) {
-      SettingsHandler();
-      WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-        caller.newClientCalls(context);
-      });
-    }
+    SettingsHandler.init(context);
 
     _flips.add(_toggleServers);
     _flips.add(_toggleUsers);

@@ -62,6 +62,7 @@ class _EditingChatState extends State<EditingChat> {
           icon: const Icon(Icons.cancel_outlined),
           onPressed: () {
             _editingController.text = '';
+            widget.editItem.editBtn = const SizedBox();
             ChatHandler().changeEditIndex(-27);
           },
         ),
