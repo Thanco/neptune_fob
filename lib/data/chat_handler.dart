@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
-import 'package:neptune_fob/ui/chat_item.dart';
+import 'package:neptune_fob/data/chat_item.dart';
 import 'package:neptune_fob/ui/sound_handler.dart';
 
 class ChatHandler with ChangeNotifier {

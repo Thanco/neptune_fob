@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
 import 'package:neptune_fob/data/text_style_handler.dart';
-import 'package:neptune_fob/ui/chat_item.dart';
+import 'package:neptune_fob/data/chat_item.dart';
 import 'package:provider/provider.dart';
 
 class DisplayChat extends StatefulWidget {

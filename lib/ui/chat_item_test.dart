@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/text_style_handler.dart';
-import 'package:neptune_fob/ui/chat_item.dart';
+import 'package:neptune_fob/data/chat_item.dart';
 import 'package:neptune_fob/ui/image_view.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';

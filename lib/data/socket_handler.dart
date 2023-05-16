@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/server_handler.dart';
-import 'package:neptune_fob/ui/chat_item.dart';
+import 'package:neptune_fob/data/chat_item.dart';
 import 'package:neptune_fob/data/user_handler.dart';
 import 'package:neptune_fob/ui/typing_status.dart';
 import 'package:socket_io_client/socket_io_client.dart';
