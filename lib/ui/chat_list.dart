@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
-import 'package:neptune_fob/ui/chat_item.dart';
+import 'package:neptune_fob/data/chat_item.dart';
 import 'package:neptune_fob/ui/display_chat_item.dart';
 import 'package:neptune_fob/ui/editing_chat.dart';
 import 'package:provider/provider.dart';
