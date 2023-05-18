@@ -1,4 +1,6 @@
 // Copyright Terry Hancock 2023
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
@@ -17,6 +19,36 @@ class EditingChat extends StatelessWidget {
     if (_editingController.text == '') {
       _editingController.text = editItem.content;
     }
+    List<Widget> buttons = [
+      const SizedBox(width: 20),
+      IconButton(
+        icon: const Icon(Icons.delete_outline),
+        onPressed: () {
+          SocketHandler().requestDelete(ChatHandler().editIndex);
+          _editingController.text = '';
+          ChatHandler().changeEditIndex(-27);
+        },
+      ),
+      const SizedBox(width: 20),
+      IconButton(
+        icon: const Icon(Icons.cancel_outlined),
+        onPressed: () {
+          _editingController.text = '';
+          editItem.editBtn = const SizedBox();
+          ChatHandler().changeEditIndex(-27);
+        },
+      ),
+      const SizedBox(width: 20),
+      IconButton(
+        icon: const Icon(Icons.check),
+        onPressed: () {
+          SocketHandler().submitEdit(ChatHandler().editIndex, _editingController.text);
+          _editingController.text = '';
+          ChatHandler().changeEditIndex(-27);
+        },
+      ),
+      const SizedBox(width: 20),
+    ];
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -42,34 +74,7 @@ class EditingChat extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 20),
-        IconButton(
-          icon: const Icon(Icons.delete_outline),
-          onPressed: () {
-            SocketHandler().requestDelete(ChatHandler().editIndex);
-            _editingController.text = '';
-            ChatHandler().changeEditIndex(-27);
-          },
-        ),
-        const SizedBox(width: 20),
-        IconButton(
-          icon: const Icon(Icons.cancel_outlined),
-          onPressed: () {
-            _editingController.text = '';
-            editItem.editBtn = const SizedBox();
-            ChatHandler().changeEditIndex(-27);
-          },
-        ),
-        const SizedBox(width: 20),
-        IconButton(
-          icon: const Icon(Icons.check),
-          onPressed: () {
-            SocketHandler().submitEdit(ChatHandler().editIndex, _editingController.text);
-            _editingController.text = '';
-            ChatHandler().changeEditIndex(-27);
-          },
-        ),
-        const SizedBox(width: 20),
+        Platform.isAndroid ? Column(children: buttons) : Row(children: buttons),
       ],
     );
   }

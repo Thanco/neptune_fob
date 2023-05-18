@@ -97,9 +97,9 @@ class _InputFieldState extends State<InputField> {
           builder: (buildContext, constraints) {
             final List<Widget> inputColumn = [
               SizedBox(
-                width: constraints.maxWidth - 130,
+                width: constraints.maxWidth - (Platform.isAndroid ? 150 : 130),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 0, 0, 10),
+                  padding: const EdgeInsets.fromLTRB(5, 0, 0, 10),
                   child: RawKeyboardListener(
                     focusNode: FocusNode(),
                     onKey: (RawKeyEvent event) {
@@ -143,7 +143,7 @@ class _InputFieldState extends State<InputField> {
               Consumer<TextStyleHandler>(
                 builder: (context, textStyleHandler, child) => SizedBox(
                   height: textStyleHandler.fontSize * 0.36,
-                  width: constraints.maxWidth - 130,
+                  width: constraints.maxWidth - (Platform.isAndroid ? 150 : 130),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(15, 0, 0, 0),
                     child: TypingStatus(constraints.maxWidth - 130),
@@ -190,7 +190,7 @@ class _InputFieldState extends State<InputField> {
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: MaterialButton(
                     onPressed: _pasteImage,
                     onLongPress: _selectImage,

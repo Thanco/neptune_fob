@@ -1,5 +1,4 @@
-import 'dart:collection';
-
+// Copyright Terry Hancock 2023
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 class RemoteConnection {
@@ -102,7 +101,7 @@ class RemoteConnection {
       if (connectionState == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
           connectionState == RTCPeerConnectionState.RTCPeerConnectionStateClosed ||
           connectionState == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
-        _dispose();
+        dispose();
       }
     });
 
@@ -155,7 +154,7 @@ class RemoteConnection {
     return answer;
   }
 
-  void _dispose() async {
+  void dispose() async {
     await _peerConnection!.dispose();
     _remoteRenderer.dispose();
     _disposeAlert.call(this);

@@ -50,6 +50,7 @@ class _MainChat extends StatefulWidget {
 class _MainChatState extends State<_MainChat> {
   final List<bool> _displayPanels = [false, false];
   final List<Function> _flips = [];
+
   // final NeptuneBar _neptuneBar = const NeptuneBar();
   // final NeptuneDrawer _drawer = const NeptuneDrawer();
 
@@ -82,9 +83,9 @@ class _MainChatState extends State<_MainChat> {
     flex: 4,
     child: UserPanel(),
   );
-  final Flexible _serverPanel = const Flexible(
+  late final Flexible _serverPanel = const Flexible(
     flex: 4,
-    child: ServerPanel(),
+    child: ServerPanel(RTCPanel()),
   );
 
   @override

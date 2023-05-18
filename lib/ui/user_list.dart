@@ -1,3 +1,4 @@
+// Copyright Terry Hancock 2023
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:neptune_fob/data/text_style_handler.dart';

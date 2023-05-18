@@ -1,3 +1,4 @@
+// Copyright Terry Hancock 2023
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';

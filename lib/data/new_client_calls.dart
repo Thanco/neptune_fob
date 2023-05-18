@@ -1,3 +1,4 @@
+// Copyright Terry Hancock 2023
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/settings_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
