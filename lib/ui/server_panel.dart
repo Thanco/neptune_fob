@@ -35,18 +35,14 @@ class ServerPanel extends StatelessWidget {
                 );
               },
             ),
-            const Flexible(
-              flex: 6,
+            const Expanded(
               child: Padding(
                 padding: EdgeInsets.all(8.0),
                 child: ServerList(),
               ),
             ),
-            Flexible(
-              flex: 1,
-              child: Center(
-                child: _rtcPanel,
-              ),
+            Center(
+              child: _rtcPanel,
             ),
           ],
         ),

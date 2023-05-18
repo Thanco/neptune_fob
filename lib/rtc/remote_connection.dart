@@ -155,6 +155,7 @@ class RemoteConnection {
   }
 
   void dispose() async {
+    await _peerConnection!.close();
     await _peerConnection!.dispose();
     _remoteRenderer.dispose();
     _disposeAlert.call(this);

@@ -46,7 +46,7 @@ class _InputFieldState extends State<InputField> {
       SocketHandler().sendImageBytes(_imageBytes!);
       _imagePaste = false;
     }
-    String message = _controller.text;
+    String message = _controller.text.trim();
     _controller.text = '';
     if (!_isURL(message) && _isImageFile(message)) {
       SocketHandler().sendImageFile(message);
@@ -58,7 +58,7 @@ class _InputFieldState extends State<InputField> {
   void _pasteImage() async {
     ClipboardData? data = await Clipboard.getData(Clipboard.kTextPlain);
     if (data != null) {
-      _controller.text = _controller.text + data.text!;
+      // _controller.text = _controller.text + data.text!;
       return;
     }
     _imageBytes = await Pasteboard.image;
@@ -104,14 +104,17 @@ class _InputFieldState extends State<InputField> {
                     focusNode: FocusNode(),
                     onKey: (RawKeyEvent event) {
                       // print(event.isKeyPressed(LogicalKeyboardKey.enter));
-                      if (!Platform.isAndroid &&
-                          (event.isKeyPressed(LogicalKeyboardKey.enter) ||
-                              event.isKeyPressed(LogicalKeyboardKey.numpadEnter)) &&
-                          !event.isShiftPressed) {
-                        if (_controller.text == '\n\r') {
-                          return;
+                      if (!Platform.isAndroid) {
+                        if ((event.isKeyPressed(LogicalKeyboardKey.enter) ||
+                                event.isKeyPressed(LogicalKeyboardKey.numpadEnter)) &&
+                            !event.isShiftPressed) {
+                          if (_controller.text == '\n\r') {
+                            return;
+                          }
+                          _testMessage();
+                        } else if (event.isKeyPressed(LogicalKeyboardKey.keyV) && event.isControlPressed) {
+                          _pasteImage();
                         }
-                        _testMessage();
                       }
                     },
                     child: Consumer<TextStyleHandler>(

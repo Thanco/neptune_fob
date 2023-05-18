@@ -20,7 +20,7 @@ class RTCHandler {
     return _instance;
   }
 
-  late Socket socket;
+  late Socket _socket;
 
   bool inCall = false;
 
@@ -32,22 +32,18 @@ class RTCHandler {
 
   final List<Map<int, RTCIceCandidate>> _iceCandidates = [];
   final Map<int, RemoteConnection> _remoteConnections = {};
-  MediaStream? localStream;
+  MediaStream? _localStream;
 
-  int id = -1;
+  int _id = -1;
 
   void enterCall() {
-    // _connectToSignalingServer('ws://10.144.44.138:27415/');
-    // _connectToSignalingServer('ws://10.144.43.61:27415/');
-    // _connectToSignalingServer('ws://localhost:27415/');
-    // _connectToSignalingServer('ws://173.93.225.199:27415/');
-    _connectToSignalingServer('ws://${SocketHandler().uri.split(':')[1].replaceAll('/', '')}:27415/');
+    _connectToSignalingServer(SocketHandler().uri);
   }
 
   void _connectToSignalingServer(String serverUri) async {
-    await localVideoRenderer.initialize();
+    await _localVideoRenderer.initialize();
 
-    socket = io(
+    _socket = io(
         serverUri,
         OptionBuilder()
             .setTransports(['websocket'])
@@ -63,18 +59,21 @@ class RTCHandler {
     //   await _handleSignalingMessage(json.decode(message));
     // });
 
-    socket.connect();
+    _socket.connect();
   }
 
   void _setSocketListeners() {
-    socket.onConnect((data) => print('Socket Connected'));
-    socket.onError((data) => print(data));
-    socket.on('serverResponse', (responseJson) async {
+    _socket.onConnect((data) {
+      _socket.emit('vcClient');
+      print('Socket Connected');
+    });
+    _socket.onError((data) => print(data));
+    _socket.on('serverResponse', (responseJson) async {
       Map<String, dynamic> response = json.decode(responseJson);
       print('Client connected');
       await _getUserMedia();
-      id = response['id'];
-      print('This client\'s id = $id');
+      _id = response['id'];
+      print('This client\'s id = $_id');
       List<int> peerIDs = response['ids'].cast<int>();
       if (peerIDs.isEmpty) {
         print('Client is alone');
@@ -82,13 +81,13 @@ class RTCHandler {
       }
       for (int i = 0; i < peerIDs.length; i++) {
         RemoteConnection rc =
-            RemoteConnection(peerIDs[i], localStream!, _buildParent, _onIceCandidate, _disposeConnection);
-        await rc.init(iceCandidates);
-        remoteConnections.putIfAbsent(peerIDs[i], () => rc);
+            RemoteConnection(peerIDs[i], _localStream!, _buildParent, _onIceCandidate, _disposeConnection);
+        await rc.init(_iceCandidates);
+        _remoteConnections.putIfAbsent(peerIDs[i], () => rc);
         await _sendOffer(peerIDs[i]);
       }
     });
-    socket.on('offer', (offerJson) async {
+    _socket.on('offer', (offerJson) async {
       Map<String, dynamic> offerMap = jsonDecode(offerJson);
       RTCSessionDescription offer = RTCSessionDescription(
         offerMap['sdp'],
@@ -96,12 +95,10 @@ class RTCHandler {
       );
 
       final RemoteConnection rc =
-          RemoteConnection(offerMap['fromID'], localStream!, _buildParent, _onIceCandidate, _disposeConnection);
-      await rc.init(iceCandidates);
+          RemoteConnection(offerMap['fromID'], _localStream!, _buildParent, _onIceCandidate, _disposeConnection);
+      await rc.init(_iceCandidates);
 
-      print('before');
-      remoteConnections.putIfAbsent(rc.id, () => rc);
-      print('after');
+      _remoteConnections.putIfAbsent(rc.id, () => rc);
 
       // await _peerConnection?.setRemoteDescription(offer);
       await rc.setRemoteDescription(offer);
@@ -110,11 +107,11 @@ class RTCHandler {
       // await _peerConnection?.setLocalDescription(answer);
       RTCSessionDescription answer = await rc.createAnswer();
 
-      socket.emit(
+      _socket.emit(
           'answer',
           json.encode({
             'id': rc.id,
-            'fromID': id,
+            'fromID': _id,
             'sdp': answer.sdp,
           }));
       // _sendSignalingMessage({
@@ -125,7 +122,7 @@ class RTCHandler {
       // });
       print('Offer recived from ${offerMap['fromID']}');
     });
-    socket.on('answer', (answerJson) async {
+    _socket.on('answer', (answerJson) async {
       Map<String, dynamic> answerMap = jsonDecode(answerJson);
       // if (_iceState == RTCIceConnectionState.RTCIceConnectionStateCompleted ||
       //     _iceState == RTCIceConnectionState.RTCIceConnectionStateConnected) {
@@ -138,11 +135,11 @@ class RTCHandler {
       );
 
       // await _peerConnection?.setRemoteDescription(answer);
-      await remoteConnections[answerMap['fromID']]!.setRemoteDescription(answer);
+      await _remoteConnections[answerMap['fromID']]!.setRemoteDescription(answer);
 
       print('Answer recived from ${answerMap['fromID']}');
     });
-    socket.on('candidate', (candidateJson) {
+    _socket.on('candidate', (candidateJson) {
       Map<String, dynamic> candidateMap = jsonDecode(candidateJson);
       RTCIceCandidate candidate = RTCIceCandidate(
         candidateMap['candidate']['candidate'].toString(),
@@ -150,9 +147,9 @@ class RTCHandler {
         candidateMap['candidate']['sdpMlineIndex'],
       );
       int id = candidateMap['fromID'];
-      RemoteConnection? rc = remoteConnections[id];
+      RemoteConnection? rc = _remoteConnections[id];
       if (rc == null) {
-        iceCandidates.add({id: candidate});
+        _iceCandidates.add({id: candidate});
         return;
       }
       rc.addIceCandidate(candidate);
@@ -162,11 +159,11 @@ class RTCHandler {
   }
 
   void _onIceCandidate(RTCIceCandidate iceCandidate, int peerID) {
-    socket.emit(
+    _socket.emit(
         'candidate',
         json.encode({
           'id': peerID,
-          'fromID': id,
+          'fromID': _id,
           'candidate': ({
             'candidate': iceCandidate.candidate.toString(),
             'sdpMid': iceCandidate.sdpMid.toString(),
@@ -194,17 +191,17 @@ class RTCHandler {
     // var connection = _remoteConnections[index].peerConnection;
     // RTCSessionDescription offer = await connection.createOffer({});
     // await connection.setLocalDescription(offer);
-    RTCSessionDescription offer = await remoteConnections[id]!.createOffer();
+    RTCSessionDescription offer = await _remoteConnections[id]!.createOffer();
     // _socket.emit('offer', '''{
     //   "id": $id,
     //   "fromID": $_id,
     //   "sdp": "${offer.sdp}",
     // }''');
-    socket.emit(
+    _socket.emit(
         'offer',
         json.encode({
           'id': id,
-          'fromID': id,
+          'fromID': _id,
           'sdp': offer.sdp,
         }));
     // _sendSignalingMessage({
@@ -232,23 +229,23 @@ class RTCHandler {
 
     MediaStream stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
 
-    localVideoRenderer.srcObject = stream;
-    localStream = stream;
+    _localVideoRenderer.srcObject = stream;
+    _localStream = stream;
     _buildParent.call();
     // setState(() {});
   }
 
   void _disposeConnection(RemoteConnection connection) {
-    remoteConnections.removeWhere((key, value) => value == connection);
+    _remoteConnections.removeWhere((key, value) => value == connection);
   }
 
   void leaveCall() {
-    if (socket.connected) {
-      socket.dispose();
+    if (_socket.connected) {
+      _socket.dispose();
     }
-    remoteConnections.forEach((id, remoteConnection) {
+    _remoteConnections.forEach((id, remoteConnection) {
       remoteConnection.dispose();
     });
-    localVideoRenderer.srcObject = null;
+    _localVideoRenderer.srcObject = null;
   }
 }

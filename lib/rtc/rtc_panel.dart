@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:neptune_fob/data/socket_handler.dart';
+import 'package:neptune_fob/rtc/remote_connection.dart';
 import 'package:neptune_fob/rtc/rtc_handler.dart';
 
 class RTCPanel extends StatefulWidget {
@@ -40,35 +42,76 @@ class _RTCPanelState extends State<RTCPanel> {
 
   @override
   Widget build(BuildContext context) {
+    List<RemoteConnection> remoteHandlers = _rtcHandler.remoteConnections.values.toList();
+    List<Widget> list = [];
+    remoteHandlers.forEach((remoteHandler) {
+      list.add(Stack(
+        children: [
+          Center(child: Text(remoteHandler.id.toString())),
+          SizedBox(
+            height: 0,
+            width: 0,
+            child: RTCVideoView(
+              remoteHandler.remoteRenderer,
+              placeholderBuilder: (context) => const SizedBox(),
+            ),
+          ),
+        ],
+      ));
+    });
+    if (_rtcHandler.inCall) {
+      list.add(Text(SocketHandler().userName));
+    }
+
     return Column(
       children: [
         MaterialButton(
-          onPressed: enterCall,
-          color: _rtcHandler.inCall ? const Color(0x00000000) : const Color.fromARGB(255, 68, 99, 179),
+          onPressed: _rtcHandler.inCall ? null : enterCall,
+          disabledColor: const Color(0x00000000),
+          color: const Color.fromARGB(255, 68, 99, 179),
           child: const Text('Join Call'),
         ),
-        Flexible(
+        SizedBox(
+          height: 0,
+          width: 0,
           child: RTCVideoView(
             _rtcHandler.localVideoRenderer,
             placeholderBuilder: (context) => const SizedBox(),
           ),
         ),
         SizedBox(
-          height: 0,
-          width: 0,
-          child: ListView.builder(
-            itemCount: _rtcHandler.remoteConnections.values.toList().length,
-            itemBuilder: (BuildContext context, int index) {
-              return RTCVideoView(
-                _rtcHandler.remoteConnections.values.toList()[index].remoteRenderer,
-                placeholderBuilder: (context) => const SizedBox(),
-              );
-            },
+          height: (remoteHandlers.length + (_rtcHandler.inCall ? 1 : 0)) * 20,
+          child: Column(
+            children: list,
           ),
         ),
+        // SizedBox(
+        //   height: (remoteHandlers.length + (_rtcHandler.inCall ? 1 : 0)) * 15,
+        //   child: ListView.builder(
+        //     itemCount: remoteHandlers.length + (_rtcHandler.inCall ? 1 : 0),
+        //     itemBuilder: (BuildContext context, int index) {
+        //       return index == remoteHandlers.length
+        //           ? Center(child: Text(SocketHandler().userName))
+        //           : SizedBox(
+        //               height: 15,
+        //               width: 30,
+        //               child: Stack(
+        //                 children: [
+        //                   Center(child: Text(remoteHandlers[index].id.toString())),
+        //                   RTCVideoView(
+        //                     remoteHandlers[index].remoteRenderer,
+        //                     placeholderBuilder: (context) => const SizedBox(),
+        //                   ),
+        //                 ],
+        //               ),
+        //             );
+        //     },
+        //   ),
+        // ),
         MaterialButton(
-          color: _rtcHandler.inCall ? const Color.fromARGB(255, 68, 99, 179) : const Color(0x00000000),
-          onPressed: leaveCall,
+          disabledColor: const Color(0x00000000),
+          color: const Color.fromARGB(255, 68, 99, 179),
+          onPressed: _rtcHandler.inCall ? leaveCall : null,
           child: const Text('Leave Call'),
         ),
       ],

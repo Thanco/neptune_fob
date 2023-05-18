@@ -43,6 +43,7 @@ class SocketHandler {
 
   void _initSocketRecievers() {
     _socket.onConnect((data) {
+      _socket.emit('chatClient');
       ChatHandler().changeChannel('Default');
       if (userName != '') {
         _socket.emit('usernameSet', userName);
