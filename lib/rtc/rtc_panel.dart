@@ -44,7 +44,7 @@ class _RTCPanelState extends State<RTCPanel> {
   Widget build(BuildContext context) {
     List<RemoteConnection> remoteHandlers = _rtcHandler.remoteConnections.values.toList();
     List<Widget> list = [];
-    remoteHandlers.forEach((remoteHandler) {
+    for (RemoteConnection remoteHandler in remoteHandlers) {
       list.add(Stack(
         children: [
           Center(child: Text(remoteHandler.id.toString())),
@@ -58,7 +58,7 @@ class _RTCPanelState extends State<RTCPanel> {
           ),
         ],
       ));
-    });
+    }
     if (_rtcHandler.inCall) {
       list.add(Text(SocketHandler().userName));
     }

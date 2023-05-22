@@ -215,6 +215,22 @@ class RTCHandler {
   Future<void> _getUserMedia() async {
     final Map<String, dynamic> mediaConstraints = {
       'audio': true,
+      // {
+      //   'mandatory': {
+      //     'OfferToReceiveAudio': true,
+      //   },
+      //   'optional': [
+      //     {'autoGainControl': false},
+      //     {'channelCount': 2},
+      //     {'echoCancellation': false},
+      //     {'latency': 0},
+      //     {'noiseSuppression': false},
+      //     {'sampleRate': 48000},
+      //     {'sampleSize': 16},
+      //     {'volume': 1.0}
+      //     // {'audioCodec': 'iSAC'},
+      //   ],
+      // },
       'video': false,
       // 'video': {
       //   // 'mandatory': {

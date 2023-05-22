@@ -55,10 +55,6 @@ class SettingsHandler {
       '"fontSize"': TextStyleHandler().fontSize,
       '"serverList"': '"${ServerHandler().serverList.toString()}"',
     };
-    BiometricStorage()
-        .getStorage(
-          'settings',
-        )
-        .then((value) => value.write(settings.toString()));
+    BiometricStorage().getStorage('settings').then((value) => value.write(settings.toString()));
   }
 }

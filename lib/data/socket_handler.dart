@@ -1,4 +1,5 @@
 // Copyright Terry Hancock 2023
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -6,12 +7,14 @@ import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/server_handler.dart';
 import 'package:neptune_fob/data/chat_item.dart';
 import 'package:neptune_fob/data/user_handler.dart';
+import 'package:neptune_fob/security/encryption_handler.dart';
 import 'package:neptune_fob/ui/typing_status.dart';
 import 'package:socket_io_client/socket_io_client.dart';
 
 class SocketHandler {
   static final SocketHandler _instance = SocketHandler._constructor();
   late Socket _socket;
+  late final EncryptionHandler _encryptionHandler = EncryptionHandler();
   String userName = '';
   bool _currentlyRequesting = false;
 
@@ -43,70 +46,111 @@ class SocketHandler {
 
   void _initSocketRecievers() {
     _socket.onConnect((data) {
+      _socket.emit('publicKey', json.encode(_encryptionHandler.getPublicKey()));
+    });
+    _socket.on('sessionKey', (data) {
+      _encryptionHandler.putSessionKey(data);
       _socket.emit('chatClient');
       ChatHandler().changeChannel('Default');
       if (userName != '') {
-        _socket.emit('usernameSet', userName);
+        _send('usernameSet', userName);
         ChatHandler().clearLists();
         UserHandler().clearUsers();
       }
     });
-    _socket
-        .onConnectError((error) => ChatHandler().addChatItem(ChatItem(-1, 'System', 'Default', 't', 'Error! $error')));
+    _socket.onConnectError(
+      (error) => ChatHandler().addChatItem(
+        ChatItem(-1, 'System', 'Default', 't', 'Error! $error'),
+      ),
+    );
     _socket.onConnectTimeout((data) =>
         ChatHandler().addChatItem(ChatItem(-1, 'System', 'Default', 't', 'Im going to stop trying now :) (timeout)')));
     _socket.on(
       'chatMessage',
       (message) {
-        ChatItem newMessage = ChatItem.fromJson(message);
+        String decryptedMessage = _encryptionHandler.decrypt(message);
+        ChatItem newMessage = ChatItem.fromJson(json.decode(decryptedMessage));
         ChatHandler().addNewChatItem(newMessage);
         TypingHandler().userNoLongerTyping(newMessage.userName);
       },
     );
     _socket.on('backlogFill', (itemListJson) {
+      String decryptedItemListJson = _encryptionHandler.decrypt(itemListJson);
+      var items = json.decode(decryptedItemListJson);
       List<ChatItem> backlogItems = [];
-      for (int i = 0; i < itemListJson.length; i++) {
-        backlogItems.add(ChatItem.fromJson(itemListJson[i]));
+      for (int i = 0; i < items.length; i++) {
+        backlogItems.add(ChatItem.fromJson(items[i]));
       }
       ChatHandler().addChatItems(backlogItems);
       _currentlyRequesting = false;
     });
     _socket.on('image', (imageMessage) {
-      ChatItem newImage = ChatItem.fromJson(imageMessage.first);
+      String decryptedImageMessage = _encryptionHandler.decrypt(imageMessage);
+      var items = json.decode(decryptedImageMessage);
+
+      ChatItem newImage = ChatItem.fromJson(items.first);
       ChatHandler().addNewChatItem(newImage);
 
       // ack response
-      imageMessage.last(null);
+      items.last(null);
     });
     _socket.on('backlogImage', (imageMessage) {
-      ChatItem newImage = ChatItem.fromJson(imageMessage.first);
+      String decryptedImageMessage = _encryptionHandler.decrypt(imageMessage);
+      var items = json.decode(decryptedImageMessage);
+
+      ChatItem newImage = ChatItem.fromJson(items.first);
       ChatHandler().addChatItem(newImage);
 
       // ack response
-      imageMessage.last(null);
+      items.last(null);
       _currentlyRequesting = false;
     });
     _socket.on('usernameSend', (clientUserName) {
-      userName = clientUserName;
+      String decryptedClientUserName = _encryptionHandler.decrypt(clientUserName);
+      userName = decryptedClientUserName;
       ServerHandler().addServer();
     });
     _socket.on('userListSend', (userList) {
-      UserHandler().addUsers(userList.cast<String>());
+      String decryptedUserList = _encryptionHandler.decrypt(userList);
+      var items = json.decode(decryptedUserList);
+      UserHandler().addUsers(items.cast<String>());
     });
-    _socket.on('userJoin', (userName) => UserHandler().addUser(userName));
-    _socket.on('userLeave', (userName) => UserHandler().removeUser(userName));
+    _socket.on(
+      'userJoin',
+      (userName) => UserHandler().addUser(_encryptionHandler.decrypt(userName)),
+    );
+    _socket.on(
+      'userLeave',
+      (userName) => UserHandler().addUser(_encryptionHandler.decrypt(userName)),
+    );
     _socket.on('userTyping', (itemJson) {
-      ChatItem item = ChatItem.fromJson(itemJson);
+      String decryptedItemJson = _encryptionHandler.decrypt(itemJson);
+      ChatItem item = ChatItem.fromJson(json.decode(decryptedItemJson));
       TypingHandler().userIsTyping(item);
     });
     _socket.on('edit', (itemJson) {
-      ChatItem editItem = ChatItem.fromJson(itemJson);
+      String decryptedItemJson = _encryptionHandler.decrypt(itemJson);
+      ChatItem editItem = ChatItem.fromJson(json.decode(decryptedItemJson));
       ChatHandler().editItem(editItem);
     });
     _socket.on('delete', (itemJson) {
-      ChatItem deleteItem = ChatItem.fromJson(itemJson);
+      String decryptedItemJson = _encryptionHandler.decrypt(itemJson);
+      ChatItem deleteItem = ChatItem.fromJson(json.decode(decryptedItemJson));
       ChatHandler().deleteItem(deleteItem);
     });
+  }
+
+  void _sendChatMessage(String event, ChatItem item) {
+    _send(event, item.toJson().toString());
+  }
+
+  void _send(String event, String message) {
+    String encryptedMessage = _encryptionHandler.encrypt(message);
+    _socket.emit(event, encryptedMessage);
+  }
+
+  void _sendImageMessage(String message) {
+    _socket.emitWithBinary('image', message);
   }
 
   void connect() {
@@ -118,7 +162,7 @@ class SocketHandler {
   }
 
   void setUsername(String userName) {
-    _socket.emit('usernameSet', userName);
+    _send('usernameSet', userName);
   }
 
   void submitEdit(int editIndex, String editText) {
@@ -129,7 +173,7 @@ class SocketHandler {
     }
     final ChatItem editItem =
         ChatItem(initialItem.itemIndex, initialItem.userName, initialItem.channel, initialItem.type, editText);
-    _socket.emit('edit', editItem.toJson().toString());
+    _sendChatMessage('edit', editItem);
   }
 
   void requestDelete(int editIndex) {
@@ -138,7 +182,7 @@ class SocketHandler {
     if (deleteItem == null) {
       return;
     }
-    _socket.emit('delete', deleteItem.toJson().toString());
+    _sendChatMessage('delete', deleteItem);
   }
 
   void changeServer(String serverURL) {
@@ -151,7 +195,7 @@ class SocketHandler {
 
   void sendMessage(String message) {
     final ChatItem item = ChatItem(-1, userName, ChatHandler().getCurrentChannel(), 't', message);
-    _socket.emit('chatMessage', item.toJson().toString());
+    _sendChatMessage('chatMessage', item);
   }
 
   Future<Uint8List> _getImage(File image) async {
@@ -166,7 +210,7 @@ class SocketHandler {
 
   void sendImageBytes(Uint8List bytes) async {
     final ChatItem item = ChatItem(-1, userName, ChatHandler().getCurrentChannel(), 'i', bytes);
-    _socket.emitWithBinary('image', item.toJson().toString());
+    _sendImageMessage(item.toJson().toString());
   }
 
   void requestMore() {
@@ -177,7 +221,7 @@ class SocketHandler {
     final ChatHandler chatHandler = ChatHandler();
     final ChatItem item = ChatItem(chatHandler.getOldestItemIndex(chatHandler.getCurrentChannel()), userName,
         chatHandler.getCurrentChannel(), 'r', null);
-    _socket.emit('messageRequest', item.toJson().toString());
+    _sendChatMessage('messageRequest', item);
   }
 
   void resetRequesting() {
@@ -185,6 +229,6 @@ class SocketHandler {
   }
 
   void sendTypingPing() {
-    _socket.emit('userTyping', ChatItem(-1, userName, ChatHandler().getCurrentChannel(), 't', 't').toJson().toString());
+    _sendChatMessage('userTyping', ChatItem(-1, userName, ChatHandler().getCurrentChannel(), 't', 't'));
   }
 }
