@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:neptune_fob/security/aes_encryption_handler.dart';
 import 'package:neptune_fob/security/rsa_encryption_handler.dart';
 

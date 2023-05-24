@@ -85,24 +85,31 @@ class SocketHandler {
       _currentlyRequesting = false;
     });
     _socket.on('image', (imageMessage) {
-      String decryptedImageMessage = _encryptionHandler.decrypt(imageMessage);
-      var items = json.decode(decryptedImageMessage);
+      String decryptedImageMessage = _encryptionHandler.decrypt(imageMessage.first);
+      // var items = json.decode(decryptedImageMessage);
+      Map<String, dynamic> itemJson = json.decode(decryptedImageMessage);
+      List<dynamic> imageBytes = itemJson['content'];
+      itemJson['content'] = Uint8List(imageBytes.length)..setRange(0, imageBytes.length, imageBytes.cast<int>());
 
-      ChatItem newImage = ChatItem.fromJson(items.first);
+      ChatItem newImage = ChatItem.fromJson(itemJson);
       ChatHandler().addNewChatItem(newImage);
 
       // ack response
-      items.last(null);
+      imageMessage.last(null);
     });
     _socket.on('backlogImage', (imageMessage) {
-      String decryptedImageMessage = _encryptionHandler.decrypt(imageMessage);
-      var items = json.decode(decryptedImageMessage);
+      String imageMessageJson = _encryptionHandler.decrypt(imageMessage);
+      // var imageChat = json.decode(imageMessageJson);
+      Map<String, dynamic> itemJson = json.decode(imageMessageJson);
+      List<dynamic> imageBytes = itemJson['content'];
 
-      ChatItem newImage = ChatItem.fromJson(items.first);
+      itemJson['content'] = Uint8List(imageBytes.length)..setRange(0, imageBytes.length, imageBytes.cast<int>());
+
+      ChatItem newImage = ChatItem.fromJson(itemJson);
       ChatHandler().addChatItem(newImage);
 
       // ack response
-      items.last(null);
+      // imageMessage.last(null);
       _currentlyRequesting = false;
     });
     _socket.on('usernameSend', (clientUserName) {
@@ -150,7 +157,7 @@ class SocketHandler {
   }
 
   void _sendImageMessage(String message) {
-    _socket.emitWithBinary('image', message);
+    _socket.emitWithBinary('image', _encryptionHandler.encrypt(message));
   }
 
   void connect() {
