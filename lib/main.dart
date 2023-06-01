@@ -1,6 +1,8 @@
 // Copyright Terry Hancock 2023
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/settings_handler.dart';
 import 'package:neptune_fob/data/text_style_handler.dart';
@@ -111,23 +113,34 @@ class _MainChatState extends State<_MainChat> {
           onDrawerChanged: (open) => open ? {} : SettingsHandler().saveSettings(),
         );
       },
-      child: Row(
-        children: [
-          _displayPanels[0] ? _serverPanel : const SizedBox(),
-          _hideMainChat(context)
-              ? const SizedBox()
-              : Flexible(
-                  flex: 16,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      ChatList(),
-                      const InputField(),
-                    ],
-                  ),
-                ),
-          _displayPanels[1] ? _userPanel : const SizedBox(),
-        ],
+      child: Slidable(
+        dragStartBehavior: DragStartBehavior.start,
+        startActionPane: ActionPane(
+          extentRatio: .8,
+          motion: const BehindMotion(),
+          children: [_serverPanel],
+        ),
+        endActionPane: ActionPane(
+          extentRatio: .8,
+          motion: const BehindMotion(),
+          children: [_userPanel],
+        ),
+        child: Row(
+          children: [
+            _displayPanels[0] ? _serverPanel : const SizedBox(),
+            Flexible(
+              flex: 16,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ChatList(),
+                  const InputField(),
+                ],
+              ),
+            ),
+            _displayPanels[1] ? _userPanel : const SizedBox(),
+          ],
+        ),
       ),
     );
   }

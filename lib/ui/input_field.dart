@@ -1,6 +1,7 @@
 // Copyright Terry Hancock 2023
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:neptune_fob/data/chat_handler.dart';
@@ -82,6 +83,10 @@ class _InputFieldState extends State<InputField> {
     setState(() {});
   }
 
+  bool isAndroid() {
+    return !kIsWeb && Platform.isAndroid;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -97,14 +102,14 @@ class _InputFieldState extends State<InputField> {
           builder: (buildContext, constraints) {
             final List<Widget> inputColumn = [
               SizedBox(
-                width: constraints.maxWidth - (Platform.isAndroid ? 150 : 130),
+                width: constraints.maxWidth - (isAndroid() ? 150 : 130),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(5, 0, 0, 10),
                   child: RawKeyboardListener(
                     focusNode: FocusNode(),
                     onKey: (RawKeyEvent event) {
                       // print(event.isKeyPressed(LogicalKeyboardKey.enter));
-                      if (!Platform.isAndroid) {
+                      if (!isAndroid()) {
                         if ((event.isKeyPressed(LogicalKeyboardKey.enter) ||
                                 event.isKeyPressed(LogicalKeyboardKey.numpadEnter)) &&
                             !event.isShiftPressed) {
@@ -146,7 +151,7 @@ class _InputFieldState extends State<InputField> {
               Consumer<TextStyleHandler>(
                 builder: (context, textStyleHandler, child) => SizedBox(
                   height: textStyleHandler.fontSize * 0.36,
-                  width: constraints.maxWidth - (Platform.isAndroid ? 150 : 130),
+                  width: constraints.maxWidth - (isAndroid() ? 150 : 130),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(15, 0, 0, 0),
                     child: TypingStatus(constraints.maxWidth - 130),

@@ -13,12 +13,10 @@ class ChatItemTest extends StatelessWidget {
   final ChatItem item;
 
   void _pushImage(Image image, BuildContext context) {
-    Navigator.of(context).push(
-      DialogRoute<void>(
-        context: context,
-        builder: (BuildContext context) => ImageView(
-          image: image,
-        ),
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => ImageView(
+        image: image,
       ),
     );
   }
@@ -186,6 +184,7 @@ class ChatItemTest extends StatelessWidget {
         );
         break;
       case 'i':
+        Color none = const Color.fromARGB(0, 0, 0, 0);
         final Uint8List bytes = item.content;
         newRow.children.add(
           Flexible(
@@ -195,6 +194,9 @@ class ChatItemTest extends StatelessWidget {
                 maxHeight: MediaQuery.of(context).size.height * 0.4,
               ),
               child: MaterialButton(
+                splashColor: none,
+                color: none,
+                hoverColor: none,
                 onPressed: () => _pushImage(
                   Image.memory(bytes),
                   context,

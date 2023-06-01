@@ -164,4 +164,11 @@ class ChatHandler with ChangeNotifier {
     notifyListeners();
     // _scrollToEnd();
   }
+
+  void removeChannel(String channel) {
+    changeChannel('Default');
+    _messageLists.remove(channel);
+    _messageListNews.remove(channel);
+    notifyListeners();
+  }
 }

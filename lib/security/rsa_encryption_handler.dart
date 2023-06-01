@@ -1,3 +1,4 @@
+// Copyright Terry Hancock 2023
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
@@ -20,19 +21,14 @@ class RSAEncryptionHandler {
     final publicKey = pair.publicKey as RSAPublicKey;
     _privateKey = pair.privateKey as RSAPrivateKey;
 
-    // Get the modulus and exponent of the public key
     final modulus = publicKey.modulus;
     final exponent = publicKey.exponent;
 
-    // Convert modulus and exponent to BigInt
     final modulusBigInt = BigInt.parse(modulus.toString());
     final exponentBigInt = BigInt.parse(exponent.toString());
 
-    // Convert BigInt values to base64-encoded strings
     final modulusBase64 = _bigIntToBase64(modulusBigInt);
 
-    // Send modulusBase64 and exponentBase64 to the Java server
-    // for RSA key pair generation on the server-side
     return [modulusBase64, exponentBigInt.toString()];
   }
 
@@ -46,17 +42,12 @@ class RSAEncryptionHandler {
   }
 
   String decryptData(String encryptedBase64) {
-    // Convert the Base64-encoded string to bytes
     final encryptedBytes = base64.decode(encryptedBase64);
 
-    // Create the RSA cipher and initialize with the private key
     final cipher = OAEPEncoding(RSAEngine())..init(false, PrivateKeyParameter<RSAPrivateKey>(_privateKey));
 
-    // Perform the RSA decryption
-    // final decryptedBytes = _processInBlocks(cipher, encryptedBytes);
     final decryptedBytes = cipher.process(encryptedBytes);
 
     return String.fromCharCodes(decryptedBytes);
-    // return decryptedText;
   }
 }

@@ -1,11 +1,16 @@
 // Copyright Terry Hancock 2023
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class NeptuneBar extends StatelessWidget {
   const NeptuneBar({super.key});
+
+  bool isAndroid() {
+    return !kIsWeb && Platform.isAndroid;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +18,7 @@ class NeptuneBar extends StatelessWidget {
       background: Stack(
         children: [
           FractionallySizedBox(
-            widthFactor: Platform.isAndroid ? .5 : .2,
+            widthFactor: isAndroid() ? .5 : .2,
             alignment: Alignment.centerLeft,
             child: MaterialButton(
               height: MediaQuery.of(context).size.height,

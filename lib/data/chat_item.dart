@@ -30,12 +30,10 @@ class ChatItem with Comparable<ChatItem> {
       };
 
   dynamic contentToJson() {
-    switch (type) {
-      case 't':
-        return '"${content.toString().replaceAll("\"", "\\\"")}"';
-      default:
-        return content;
+    if (content.runtimeType == String) {
+      return '"${content.toString().replaceAll('\\', '\\\\').replaceAll("\"", "\\\"")}"';
     }
+    return content;
   }
 
   @override

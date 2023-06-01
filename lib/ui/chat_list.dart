@@ -35,7 +35,7 @@ class ChatList extends StatelessWidget {
           builder: (context, chatHandler, child) {
             final List<ChatItem> currentList = chatHandler.getMessages('');
             // int chatLength = currentList.length;
-
+            //
             // return ListView.separated(
             //   clipBehavior: Clip.none,
             //   // reverse: true,

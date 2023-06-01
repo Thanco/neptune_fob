@@ -67,15 +67,15 @@ class SocketHandler {
         ChatHandler().addChatItem(ChatItem(-1, 'System', 'Default', 't', 'Im going to stop trying now :) (timeout)')));
     _socket.on(
       'chatMessage',
-      (message) {
-        String decryptedMessage = _encryptionHandler.decrypt(message);
+      (message) async {
+        String decryptedMessage = await _encryptionHandler.decrypt(message);
         ChatItem newMessage = ChatItem.fromJson(json.decode(decryptedMessage));
         ChatHandler().addNewChatItem(newMessage);
         TypingHandler().userNoLongerTyping(newMessage.userName);
       },
     );
-    _socket.on('backlogFill', (itemListJson) {
-      String decryptedItemListJson = _encryptionHandler.decrypt(itemListJson);
+    _socket.on('backlogFill', (itemListJson) async {
+      String decryptedItemListJson = await _encryptionHandler.decrypt(itemListJson);
       var items = json.decode(decryptedItemListJson);
       List<ChatItem> backlogItems = [];
       for (int i = 0; i < items.length; i++) {
@@ -84,12 +84,15 @@ class SocketHandler {
       ChatHandler().addChatItems(backlogItems);
       _currentlyRequesting = false;
     });
-    _socket.on('image', (imageMessage) {
-      String decryptedImageMessage = _encryptionHandler.decrypt(imageMessage.first);
+    _socket.on('image', (imageMessage) async {
+      String decryptedImageMessage = await _encryptionHandler.decrypt(imageMessage.first);
       // var items = json.decode(decryptedImageMessage);
       Map<String, dynamic> itemJson = json.decode(decryptedImageMessage);
-      List<dynamic> imageBytes = itemJson['content'];
-      itemJson['content'] = Uint8List(imageBytes.length)..setRange(0, imageBytes.length, imageBytes.cast<int>());
+      String zippedImageBytesBase64 = itemJson['content'];
+
+      Uint8List zippedImageBytes = base64.decode(zippedImageBytesBase64);
+      itemJson['content'] = gzip.decode(zippedImageBytes);
+      // itemJson['content'] = Uint8List(imageBytes.length)..setRange(0, imageBytes.length, imageBytes.cast<int>());
 
       ChatItem newImage = ChatItem.fromJson(itemJson);
       ChatHandler().addNewChatItem(newImage);
@@ -97,13 +100,16 @@ class SocketHandler {
       // ack response
       imageMessage.last(null);
     });
-    _socket.on('backlogImage', (imageMessage) {
-      String imageMessageJson = _encryptionHandler.decrypt(imageMessage);
+    _socket.on('backlogImage', (imageMessage) async {
+      String imageMessageJson = await _encryptionHandler.decrypt(imageMessage);
       // var imageChat = json.decode(imageMessageJson);
       Map<String, dynamic> itemJson = json.decode(imageMessageJson);
-      List<dynamic> imageBytes = itemJson['content'];
+      String zippedImageBytesBase64 = itemJson['content'];
 
-      itemJson['content'] = Uint8List(imageBytes.length)..setRange(0, imageBytes.length, imageBytes.cast<int>());
+      Uint8List zippedImageBytes = base64.decode(zippedImageBytesBase64);
+      itemJson['content'] = gzip.decode(zippedImageBytes);
+
+      // itemJson['content'] = Uint8List(imageBytes.length)..setRange(0, imageBytes.length, imageBytes.cast<int>());
 
       ChatItem newImage = ChatItem.fromJson(itemJson);
       ChatHandler().addChatItem(newImage);
@@ -112,38 +118,43 @@ class SocketHandler {
       // imageMessage.last(null);
       _currentlyRequesting = false;
     });
-    _socket.on('usernameSend', (clientUserName) {
-      String decryptedClientUserName = _encryptionHandler.decrypt(clientUserName);
+    _socket.on('usernameSend', (clientUserName) async {
+      String decryptedClientUserName = await _encryptionHandler.decrypt(clientUserName);
       userName = decryptedClientUserName;
       ServerHandler().addServer();
     });
-    _socket.on('userListSend', (userList) {
-      String decryptedUserList = _encryptionHandler.decrypt(userList);
+    _socket.on('userListSend', (userList) async {
+      String decryptedUserList = await _encryptionHandler.decrypt(userList);
       var items = json.decode(decryptedUserList);
       UserHandler().addUsers(items.cast<String>());
     });
     _socket.on(
       'userJoin',
-      (userName) => UserHandler().addUser(_encryptionHandler.decrypt(userName)),
+      (userName) async => UserHandler().addUser(await _encryptionHandler.decrypt(userName)),
     );
     _socket.on(
       'userLeave',
-      (userName) => UserHandler().addUser(_encryptionHandler.decrypt(userName)),
+      (userName) async => UserHandler().removeUser(await _encryptionHandler.decrypt(userName)),
     );
-    _socket.on('userTyping', (itemJson) {
-      String decryptedItemJson = _encryptionHandler.decrypt(itemJson);
+    _socket.on('userTyping', (itemJson) async {
+      String decryptedItemJson = await _encryptionHandler.decrypt(itemJson);
       ChatItem item = ChatItem.fromJson(json.decode(decryptedItemJson));
       TypingHandler().userIsTyping(item);
     });
-    _socket.on('edit', (itemJson) {
-      String decryptedItemJson = _encryptionHandler.decrypt(itemJson);
+    _socket.on('edit', (itemJson) async {
+      String decryptedItemJson = await _encryptionHandler.decrypt(itemJson);
       ChatItem editItem = ChatItem.fromJson(json.decode(decryptedItemJson));
       ChatHandler().editItem(editItem);
     });
-    _socket.on('delete', (itemJson) {
-      String decryptedItemJson = _encryptionHandler.decrypt(itemJson);
+    _socket.on('delete', (itemJson) async {
+      String decryptedItemJson = await _encryptionHandler.decrypt(itemJson);
       ChatItem deleteItem = ChatItem.fromJson(json.decode(decryptedItemJson));
       ChatHandler().deleteItem(deleteItem);
+    });
+    _socket.on('removeChannel', (itemJson) async {
+      String decryptedItemJson = await _encryptionHandler.decrypt(itemJson);
+      ChatItem deleteItem = ChatItem.fromJson(json.decode(decryptedItemJson));
+      ChatHandler().removeChannel(deleteItem.channel);
     });
   }
 
@@ -151,13 +162,14 @@ class SocketHandler {
     _send(event, item.toJson().toString());
   }
 
-  void _send(String event, String message) {
-    String encryptedMessage = _encryptionHandler.encrypt(message);
+  void _send(String event, String message) async {
+    String encryptedMessage = await _encryptionHandler.encrypt(message);
     _socket.emit(event, encryptedMessage);
   }
 
-  void _sendImageMessage(String message) {
-    _socket.emitWithBinary('image', _encryptionHandler.encrypt(message));
+  void _sendImageMessage(String message) async {
+    String imageMessage = await _encryptionHandler.encrypt(message);
+    _socket.emitWithBinary('image', imageMessage);
   }
 
   void connect() {
@@ -216,7 +228,10 @@ class SocketHandler {
   }
 
   void sendImageBytes(Uint8List bytes) async {
-    final ChatItem item = ChatItem(-1, userName, ChatHandler().getCurrentChannel(), 'i', bytes);
+    final gZipImg = gzip.encode(bytes);
+    String zipImageEncode = base64.encode(gZipImg);
+
+    final ChatItem item = ChatItem(-1, userName, ChatHandler().getCurrentChannel(), 'i', zipImageEncode);
     _sendImageMessage(item.toJson().toString());
   }
 
@@ -237,5 +252,9 @@ class SocketHandler {
 
   void sendTypingPing() {
     _sendChatMessage('userTyping', ChatItem(-1, userName, ChatHandler().getCurrentChannel(), 't', 't'));
+  }
+
+  void removeChannel(String channel) {
+    _sendChatMessage('removeChannel', ChatItem(-1, userName, channel, 'd', ''));
   }
 }

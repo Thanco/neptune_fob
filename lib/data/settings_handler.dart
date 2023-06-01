@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:biometric_storage/biometric_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/new_client_calls.dart';
 import 'package:neptune_fob/data/server_handler.dart';
@@ -17,7 +18,7 @@ class SettingsHandler {
   }
 
   void _initSettings(BuildContext context) async {
-    if (!Platform.isWindows &&
+    if ((kIsWeb || !Platform.isWindows) &&
         await BiometricStorage().canAuthenticate().then((value) => value != CanAuthenticateResponse.success)) {
       NewClientCalls().newClientCalls(context);
       return;

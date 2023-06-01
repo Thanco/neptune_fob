@@ -34,42 +34,41 @@ class NewClientCalls {
   }
 
   void _pushScreen(BuildContext context, String title) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (BuildContext context) {
-          TextEditingController controller = TextEditingController();
-          return InputPrompt(
-            controller: controller,
-            formTitle: title,
-            onSubmit: () {
-              switch (title) {
-                case 'Username':
-                  if (controller.text.isEmpty || controller.text.length > 16) {
-                    return;
-                  }
-                  SocketHandler().setUsername(controller.text);
-                  Navigator.of(context).pop();
-                  SettingsHandler().saveSettings();
-                  break;
-                case 'Server Address':
-                  if (!controller.text.startsWith('http://')) {
-                    controller.text = 'http://${controller.text}/';
-                  }
-                  final SocketHandler socket = SocketHandler();
-                  if (socket.connected) {
-                    socket.disconnect();
-                  }
-                  socket.uri = controller.text;
-                  socket.connect();
-                  Navigator.of(context).pop();
-                  break;
-                default:
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        TextEditingController controller = TextEditingController();
+        return InputPrompt(
+          controller: controller,
+          formTitle: title,
+          onSubmit: () {
+            switch (title) {
+              case 'Username':
+                if (controller.text.isEmpty || controller.text.length > 16) {
                   return;
-              }
-            },
-          );
-        },
-      ),
+                }
+                SocketHandler().setUsername(controller.text);
+                Navigator.of(context).pop();
+                SettingsHandler().saveSettings();
+                break;
+              case 'Server Address':
+                if (!controller.text.startsWith('http://')) {
+                  controller.text = 'http://${controller.text}/';
+                }
+                final SocketHandler socket = SocketHandler();
+                if (socket.connected) {
+                  socket.disconnect();
+                }
+                socket.uri = controller.text;
+                socket.connect();
+                Navigator.of(context).pop();
+                break;
+              default:
+                return;
+            }
+          },
+        );
+      },
     );
   }
 }

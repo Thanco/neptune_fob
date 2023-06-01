@@ -2,6 +2,7 @@
 
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
@@ -67,7 +68,7 @@ class _DisplayChatState extends State<DisplayChat> {
         ),
       ],
     );
-    if (Platform.isWindows) {
+    if (!kIsWeb && Platform.isWindows) {
       return MouseRegion(
         onHover: (event) => _showEditButton(),
         onExit: (event) => _hideEditButton(),
