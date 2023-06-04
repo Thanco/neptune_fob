@@ -169,7 +169,7 @@ class SocketHandler {
 
   void _sendImageMessage(String message) async {
     String imageMessage = await _encryptionHandler.encrypt(message);
-    _socket.emitWithBinary('image', imageMessage);
+    _socket.emit('image', imageMessage);
   }
 
   void connect() {

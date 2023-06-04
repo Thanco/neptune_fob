@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
 import 'package:neptune_fob/data/text_style_handler.dart';
@@ -42,11 +43,7 @@ class EditingChat extends StatelessWidget {
       const SizedBox(width: 20),
       IconButton(
         icon: const Icon(Icons.check),
-        onPressed: () {
-          SocketHandler().submitEdit(ChatHandler().editIndex, _editingController.text);
-          _editingController.text = '';
-          ChatHandler().changeEditIndex(-27);
-        },
+        onPressed: _submitEdit,
       ),
       const SizedBox(width: 20),
     ];
@@ -63,14 +60,24 @@ class EditingChat extends StatelessWidget {
           ),
         ),
         Flexible(
-          child: Consumer<TextStyleHandler>(
-            builder: (context, textStyleHandler, child) => TextField(
-              controller: _editingController,
-              minLines: 1,
-              maxLines: 10,
-              style: TextStyle(
-                fontSize: textStyleHandler.fontSize,
-                fontFamily: textStyleHandler.font,
+          child: RawKeyboardListener(
+            focusNode: FocusNode(),
+            onKey: (event) {
+              if ((event.isKeyPressed(LogicalKeyboardKey.enter) ||
+                      event.isKeyPressed(LogicalKeyboardKey.numpadEnter)) &&
+                  !event.isShiftPressed) {
+                _submitEdit();
+              }
+            },
+            child: Consumer<TextStyleHandler>(
+              builder: (context, textStyleHandler, child) => TextField(
+                controller: _editingController,
+                minLines: 1,
+                maxLines: 10,
+                style: TextStyle(
+                  fontSize: textStyleHandler.fontSize,
+                  fontFamily: textStyleHandler.font,
+                ),
               ),
             ),
           ),
@@ -78,6 +85,12 @@ class EditingChat extends StatelessWidget {
         isAndroid() ? Column(children: buttons) : Row(children: buttons),
       ],
     );
+  }
+
+  void _submitEdit() {
+    SocketHandler().submitEdit(ChatHandler().editIndex, _editingController.text);
+    _editingController.text = '';
+    ChatHandler().changeEditIndex(-27);
   }
 
   bool isAndroid() {

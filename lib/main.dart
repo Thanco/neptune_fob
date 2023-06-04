@@ -1,5 +1,8 @@
 // Copyright Terry Hancock 2023
 
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -52,14 +55,6 @@ class _MainChat extends StatefulWidget {
 class _MainChatState extends State<_MainChat> {
   final List<bool> _displayPanels = [false, false];
   final List<Function> _flips = [];
-
-  // final NeptuneBar _neptuneBar = const NeptuneBar();
-  // final NeptuneDrawer _drawer = const NeptuneDrawer();
-
-  bool _hideMainChat(BuildContext context) {
-    return MediaQuery.of(context).size.width < MediaQuery.of(context).size.height &&
-        (_displayPanels[0] || _displayPanels[1]);
-  }
 
   void _toggleServers() {
     _displayPanels[0] = !_displayPanels[0];
@@ -114,6 +109,7 @@ class _MainChatState extends State<_MainChat> {
         );
       },
       child: Slidable(
+        enabled: !kIsWeb && Platform.isAndroid,
         dragStartBehavior: DragStartBehavior.start,
         startActionPane: ActionPane(
           extentRatio: .8,
