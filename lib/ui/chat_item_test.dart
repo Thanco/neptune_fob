@@ -2,6 +2,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/text_style_handler.dart';
 import 'package:neptune_fob/data/chat_item.dart';
 import 'package:neptune_fob/ui/image_view.dart';
@@ -11,6 +12,13 @@ import 'package:url_launcher/url_launcher.dart';
 class ChatItemTest extends StatelessWidget {
   const ChatItemTest(this.item, {super.key});
   final ChatItem item;
+
+  // bool _displayUsername() {
+  //   final list = ChatHandler().getMessages(item.channel);
+  //   int index = list.indexOf(item);
+  //   int previousIndex = index - 1;
+  //   return previousIndex > 2 && list.elementAt(index - 1).userName != item.userName;
+  // }
 
   void _pushImage(Image image, BuildContext context) {
     showDialog(
@@ -85,6 +93,7 @@ class ChatItemTest extends StatelessWidget {
       children: [
         Consumer<TextStyleHandler>(
           builder: (context, textStyleHandler, child) => Text(
+            // _displayUsername() ? '${item.userName}: ' : '   ',
             '${item.userName}: ',
             style: TextStyle(
               fontFamily: textStyleHandler.font,
