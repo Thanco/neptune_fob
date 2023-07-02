@@ -130,10 +130,6 @@ class _ServerListState extends State<ServerList> {
         });
   }
 
-  bool _textMatches(String verification, String channel) {
-    return verification == channel;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Consumer<ChatHandler>(

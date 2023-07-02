@@ -85,8 +85,7 @@ class SocketHandler {
       _currentlyRequesting = false;
     });
     _socket.on('image', (imageMessage) async {
-      String decryptedImageMessage =
-          await _encryptionHandler.decrypt(imageMessage.first.first, imageMessage.first.last);
+      String decryptedImageMessage = await _encryptionHandler.decrypt(imageMessage.first, imageMessage[1]);
       // var items = json.decode(decryptedImageMessage);
       Map<String, dynamic> itemJson = json.decode(decryptedImageMessage);
       String zippedImageBytesBase64 = itemJson['content'];
