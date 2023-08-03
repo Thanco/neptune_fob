@@ -6,10 +6,13 @@ import 'dart:io';
 import 'package:biometric_storage/biometric_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:neptune_fob/data/chat_item.dart';
 import 'package:neptune_fob/data/new_client_calls.dart';
 import 'package:neptune_fob/data/server_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
 import 'package:neptune_fob/data/text_style_handler.dart';
+import 'package:neptune_fob/ui/input_prompt.dart';
+import 'package:path_provider/path_provider.dart';
 
 class SettingsHandler {
   SettingsHandler();
@@ -57,5 +60,28 @@ class SettingsHandler {
       '"serverList"': '"${ServerHandler().serverList.toString()}"',
     };
     BiometricStorage().getStorage('settings').then((value) => value.write(settings.toString()));
+  }
+
+  void saveImage(BuildContext context, ChatItem item) {
+    if (item.type != 'i') {
+      return;
+    }
+    showDialog(
+      context: context,
+      builder: (context) {
+        final controller = TextEditingController();
+        return InputPrompt(
+          controller: controller,
+          formTitle: 'What should the image name be?',
+          onSubmit: () async {
+            Navigator.of(context).pop();
+            Directory? appDocumentsDirectory = await getDownloadsDirectory();
+            String filePath = '${appDocumentsDirectory!.path}/${controller.text}.jpeg';
+            File imageFile = File(filePath);
+            await imageFile.writeAsBytes(item.content);
+          },
+        );
+      },
+    );
   }
 }

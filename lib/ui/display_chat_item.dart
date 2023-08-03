@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/chat_handler.dart';
+import 'package:neptune_fob/data/settings_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
 import 'package:neptune_fob/data/text_style_handler.dart';
 import 'package:neptune_fob/data/chat_item.dart';
@@ -28,7 +29,10 @@ class _DisplayChatState extends State<DisplayChat> {
   }
 
   void _showEditButton() {
-    if (widget.item.type != 't' || widget.item.userName != SocketHandler().userName) {
+    if (widget.item.type == 'i' && widget.item.userName != SocketHandler().userName) {
+      _showSaveButton();
+      return;
+    } else if (widget.item.userName != SocketHandler().userName) {
       return;
     }
     widget.item.editBtn = TextButton(
@@ -40,6 +44,28 @@ class _DisplayChatState extends State<DisplayChat> {
       child: Consumer<TextStyleHandler>(
         builder: (context, textStyleHandler, child) => Text(
           'Edit',
+          style: TextStyle(
+            fontSize: textStyleHandler.fontSize,
+            fontFamily: textStyleHandler.font,
+          ),
+        ),
+      ),
+    );
+    setState(() {});
+  }
+
+  void _showSaveButton() {
+    widget.item.editBtn = TextButton(
+      style: const ButtonStyle(
+        minimumSize: MaterialStatePropertyAll(Size(0, 0)),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onPressed: () {
+        SettingsHandler().saveImage(context, widget.item);
+      },
+      child: Consumer<TextStyleHandler>(
+        builder: (context, textStyleHandler, child) => Text(
+          'Save',
           style: TextStyle(
             fontSize: textStyleHandler.fontSize,
             fontFamily: textStyleHandler.font,
