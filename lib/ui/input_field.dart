@@ -105,44 +105,50 @@ class _InputFieldState extends State<InputField> {
                 width: constraints.maxWidth - (isAndroid() ? 150 : 130),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(5, 0, 0, 10),
-                  child: RawKeyboardListener(
-                    focusNode: FocusNode(),
-                    onKey: (RawKeyEvent event) {
-                      // print(event.isKeyPressed(LogicalKeyboardKey.enter));
-                      if (!isAndroid()) {
-                        if ((event.isKeyPressed(LogicalKeyboardKey.enter) ||
-                                event.isKeyPressed(LogicalKeyboardKey.numpadEnter)) &&
-                            !event.isShiftPressed) {
-                          if (_controller.text == '\n\r') {
-                            return;
+                  child: Consumer<List<FocusNode>>(
+                    builder: (context, focusNodeList, child) => RawKeyboardListener(
+                      focusNode: focusNodeList.first,
+                      onKey: (RawKeyEvent event) {
+                        // print(event.isKeyPressed(LogicalKeyboardKey.enter));
+                        if (!isAndroid()) {
+                          if ((event.isKeyPressed(LogicalKeyboardKey.enter) ||
+                                  event.isKeyPressed(LogicalKeyboardKey.numpadEnter)) &&
+                              !event.isShiftPressed) {
+                            if (_controller.text == '\n\r') {
+                              return;
+                            }
+                            _testMessage();
+                          } else if (event.isKeyPressed(LogicalKeyboardKey.keyV) && event.isControlPressed) {
+                            _pasteImage();
+                          } else if (_imagePaste && event.isKeyPressed(LogicalKeyboardKey.escape)) {
+                            _imageBytes = null;
+                            _imagePaste = false;
+                            setState(() {});
                           }
-                          _testMessage();
-                        } else if (event.isKeyPressed(LogicalKeyboardKey.keyV) && event.isControlPressed) {
-                          _pasteImage();
                         }
-                      }
-                    },
-                    child: Consumer<TextStyleHandler>(
-                      builder: (context, textStyleHandler, child) => TextField(
-                        style: TextStyle(
-                          fontFamily: textStyleHandler.font,
-                          fontSize: textStyleHandler.fontSize,
+                      },
+                      child: Consumer<TextStyleHandler>(
+                        builder: (context, textStyleHandler, child) => TextField(
+                          style: TextStyle(
+                            fontFamily: textStyleHandler.font,
+                            fontSize: textStyleHandler.fontSize,
+                          ),
+                          controller: _controller,
+                          onSubmitted: (message) {
+                            _testMessage();
+                          },
+                          onChanged: (message) {
+                            ClientTypingHandler().thisClientTyping();
+                            if (_controller.text == '\n') {
+                              _controller.text = '';
+                            }
+                          },
+                          onEditingComplete: () => _testMessage(),
+                          minLines: 1,
+                          maxLines: 20,
+                          autofocus: true,
+                          textInputAction: TextInputAction.newline,
                         ),
-                        controller: _controller,
-                        onSubmitted: (message) {
-                          _testMessage();
-                        },
-                        onChanged: (message) {
-                          ClientTypingHandler().thisClientTyping();
-                          if (_controller.text == '\n') {
-                            _controller.text = '';
-                          }
-                        },
-                        onEditingComplete: () => _testMessage(),
-                        minLines: 1,
-                        maxLines: 20,
-                        autofocus: true,
-                        textInputAction: TextInputAction.newline,
                       ),
                     ),
                   ),
@@ -196,18 +202,21 @@ class _InputFieldState extends State<InputField> {
             }
             return Row(
               mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: MaterialButton(
-                    onPressed: _pasteImage,
-                    onLongPress: _selectImage,
-                    shape: const CircleBorder(),
-                    color: ColorScheme.fromSeed(seedColor: NeptuneFOB.color).secondary,
-                    height: 50,
-                    minWidth: 50,
-                    hoverColor: Colors.blue,
-                    child: const Icon(Icons.add_sharp),
+                Consumer<TextStyleHandler>(
+                  builder: (context, textStyleHandler, child) => Padding(
+                    padding: EdgeInsets.fromLTRB(8, 0, 8, (textStyleHandler.fontSize * 0.75)),
+                    child: MaterialButton(
+                      onPressed: _pasteImage,
+                      onLongPress: _selectImage,
+                      shape: const CircleBorder(),
+                      color: ColorScheme.fromSeed(seedColor: NeptuneFOB.color).secondary,
+                      height: 50,
+                      minWidth: 50,
+                      hoverColor: Colors.blue,
+                      child: const Icon(Icons.add_sharp),
+                    ),
                   ),
                 ),
                 Column(
@@ -217,15 +226,20 @@ class _InputFieldState extends State<InputField> {
                 const SizedBox(
                   width: 10,
                 ),
-                MaterialButton(
-                  onPressed: _testMessage,
-                  splashColor: Colors.lightBlue,
-                  hoverColor: Colors.blue,
-                  shape: const CircleBorder(),
-                  color: ColorScheme.fromSeed(seedColor: NeptuneFOB.color).secondary,
-                  height: 50,
-                  minWidth: 50,
-                  child: const Icon(Icons.send),
+                Consumer<TextStyleHandler>(
+                  builder: (context, textStyleHandler, child) => Padding(
+                    padding: EdgeInsets.fromLTRB(0, 0, 0, textStyleHandler.fontSize * 0.75),
+                    child: MaterialButton(
+                      onPressed: _testMessage,
+                      splashColor: Colors.lightBlue,
+                      hoverColor: Colors.blue,
+                      shape: const CircleBorder(),
+                      color: ColorScheme.fromSeed(seedColor: NeptuneFOB.color).secondary,
+                      height: 50,
+                      minWidth: 50,
+                      child: const Icon(Icons.send),
+                    ),
+                  ),
                 ),
               ],
             );

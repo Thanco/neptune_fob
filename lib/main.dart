@@ -55,6 +55,8 @@ class _MainChat extends StatefulWidget {
 class _MainChatState extends State<_MainChat> {
   final List<bool> _displayPanels = [false, false];
   final List<Function> _flips = [];
+  final FocusNode _inputPanelFocusNode = FocusNode();
+  final FocusNode _editFocusNode = FocusNode();
 
   void _toggleServers() {
     _displayPanels[0] = !_displayPanels[0];
@@ -93,19 +95,29 @@ class _MainChatState extends State<_MainChat> {
       providers: [
         ChangeNotifierProvider(create: (context) => TextStyleHandler()),
         Provider<List<Function>>(create: (context) => _flips),
+        Provider<List<FocusNode>>(create: (context) => [_inputPanelFocusNode, _editFocusNode]),
         ChangeNotifierProvider(create: (context) => UserHandler()),
         ChangeNotifierProvider<ChatHandler>(create: (context) => ChatHandler()),
         ChangeNotifierProvider<TypingHandler>(create: (context) => TypingHandler())
       ],
       builder: (context, child) {
-        return Scaffold(
-          appBar: AppBar(
-            flexibleSpace: const NeptuneBar(),
+        return FocusScope(
+          onKeyEvent: (node, event) {
+            if (_editFocusNode.hasFocus) {
+              return KeyEventResult.ignored;
+            }
+            _inputPanelFocusNode.children.first.requestFocus();
+            return KeyEventResult.ignored;
+          },
+          child: Scaffold(
+            appBar: AppBar(
+              flexibleSpace: const NeptuneBar(),
+            ),
+            drawer: const NeptuneDrawer(),
+            body: child,
+            resizeToAvoidBottomInset: true,
+            onDrawerChanged: (open) => open ? {} : SettingsHandler().saveSettings(),
           ),
-          drawer: const NeptuneDrawer(),
-          body: child,
-          resizeToAvoidBottomInset: true,
-          onDrawerChanged: (open) => open ? {} : SettingsHandler().saveSettings(),
         );
       },
       child: Slidable(

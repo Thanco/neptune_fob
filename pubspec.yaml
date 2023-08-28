@@ -3,7 +3,7 @@ description: The front end client for Project Neptune.
 
 publish_to: 'none'
 
-version: 0.12.1+0
+version: 0.12.1+2
 
 environment:
   sdk: '>=2.18.5'
@@ -22,7 +22,7 @@ dependencies:
   pasteboard: ^0.2.0
   path_provider: ^2.0.3
 
-  audioplayers: ^4.0.1
+  audioplayers: ^4.1.0
 
   url_launcher: ^6.1.7
 

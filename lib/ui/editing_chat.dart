@@ -70,8 +70,9 @@ class EditingChat extends StatelessWidget {
                 child: Image.memory(editItem.content),
               )
             : Flexible(
-                child: RawKeyboardListener(
-                  focusNode: FocusNode(),
+                child: Consumer<List<FocusNode>>(
+                builder: (context, focusNodeList, child) => RawKeyboardListener(
+                  focusNode: focusNodeList.last,
                   onKey: (event) {
                     if ((event.isKeyPressed(LogicalKeyboardKey.enter) ||
                             event.isKeyPressed(LogicalKeyboardKey.numpadEnter)) &&
@@ -91,8 +92,8 @@ class EditingChat extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
-        const Spacer(),
+              )),
+        isImage ? const Spacer() : const SizedBox(),
         isAndroid() ? Column(children: buttons) : Row(children: buttons),
       ],
     );
