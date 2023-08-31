@@ -208,8 +208,7 @@ class _InputFieldState extends State<InputField> {
                   builder: (context, textStyleHandler, child) => Padding(
                     padding: EdgeInsets.fromLTRB(8, 0, 8, (textStyleHandler.fontSize * 0.75)),
                     child: MaterialButton(
-                      onPressed: _pasteImage,
-                      onLongPress: _selectImage,
+                      onPressed: Platform.isWindows ? _pasteImage : _selectImage,
                       shape: const CircleBorder(),
                       color: ColorScheme.fromSeed(seedColor: NeptuneFOB.color).secondary,
                       height: 50,

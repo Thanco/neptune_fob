@@ -1,10 +1,14 @@
 // Copyright Terry Hancock 2023
 import 'package:flutter/material.dart';
+import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/new_client_calls.dart';
+import 'package:neptune_fob/data/profile_handler.dart';
 import 'package:neptune_fob/data/server_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
 import 'package:neptune_fob/data/text_style_handler.dart';
 import 'package:neptune_fob/main.dart';
+import 'package:neptune_fob/ui/profile/profile_card.dart';
+import 'package:neptune_fob/ui/profile/profile_menu.dart';
 import 'package:provider/provider.dart';
 
 class NeptuneDrawer extends StatefulWidget {
@@ -124,31 +128,60 @@ class _NeptuneDrawerState extends State<NeptuneDrawer> {
               const SizedBox(
                 height: 15,
               ),
-              Consumer<TextStyleHandler>(
-                builder: (context, textStyleHandler, child) => Row(
-                  children: [
-                    Text(
-                      'Username: ${SocketHandler().userName}  ',
+              // Consumer<TextStyleHandler>(
+              //   builder: (context, textStyleHandler, child) => Row(
+              //     children: [
+              //       Text(
+              //         'Username: ${SocketHandler().userName}  ',
+              //         style: TextStyle(
+              //           fontFamily: textStyleHandler.font,
+              //           fontSize: 22,
+              //         ),
+              //       ),
+              //       const Spacer(),
+              //       MaterialButton(
+              //         onPressed: () => NewClientCalls().changeUserName(context),
+              //         minWidth: 25,
+              //         color: NeptuneFOB.color,
+              //         hoverColor: Colors.amber,
+              //         child: Text(
+              //           'Change',
+              //           style: TextStyle(
+              //             fontFamily: textStyleHandler.font,
+              //             fontSize: 22,
+              //           ),
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
+              SizedBox(
+                height: 120,
+                width: 100,
+                child: ProfileCard(profile: ProfileHandler().profiles[SocketHandler().userName]!),
+              ),
+              const SizedBox(height: 10),
+              Center(
+                child: MaterialButton(
+                  onPressed: () {
+                    showDialog(
+                        context: context,
+                        builder: (context) {
+                          return const ProfileMenu();
+                        });
+                  },
+                  minWidth: 25,
+                  color: NeptuneFOB.color,
+                  hoverColor: Colors.amber,
+                  child: Consumer<TextStyleHandler>(
+                    builder: (context, textStyleHandler, child) => Text(
+                      'Change Profile',
                       style: TextStyle(
                         fontFamily: textStyleHandler.font,
                         fontSize: 22,
                       ),
                     ),
-                    const Spacer(),
-                    MaterialButton(
-                      onPressed: () => NewClientCalls().changeUserName(context),
-                      minWidth: 25,
-                      color: NeptuneFOB.color,
-                      hoverColor: Colors.amber,
-                      child: Text(
-                        'Change',
-                        style: TextStyle(
-                          fontFamily: textStyleHandler.font,
-                          fontSize: 22,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
               const SizedBox(

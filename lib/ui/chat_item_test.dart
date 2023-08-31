@@ -2,8 +2,12 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:neptune_fob/data/chat_handler.dart';
+import 'package:neptune_fob/data/profile.dart';
+import 'package:neptune_fob/data/profile_handler.dart';
 import 'package:neptune_fob/data/text_style_handler.dart';
 import 'package:neptune_fob/data/chat_item.dart';
+import 'package:neptune_fob/main.dart';
 import 'package:neptune_fob/ui/image_view.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -12,12 +16,12 @@ class ChatItemTest extends StatelessWidget {
   const ChatItemTest(this.item, {super.key});
   final ChatItem item;
 
-  // bool _displayUsername() {
-  //   final list = ChatHandler().getMessages(item.channel);
-  //   int index = list.indexOf(item);
-  //   int previousIndex = index - 1;
-  //   return previousIndex > 2 && list.elementAt(index - 1).userName != item.userName;
-  // }
+  bool _displayUsername() {
+    final list = ChatHandler().getMessages(item.channel);
+    int index = list.indexOf(item);
+    int previousIndex = index - 1;
+    return previousIndex > 2 && list.elementAt(index - 1).userName != item.userName;
+  }
 
   void _pushImage(Image image, BuildContext context) {
     showDialog(
@@ -87,25 +91,60 @@ class ChatItemTest extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    bool repeat = _displayUsername();
+    // final profile = ChatHandler().profiles[item.userName] ?? Profile.blank(item.userName);
+    final newColumn = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        repeat
+            ? Consumer2<ProfileHandler, TextStyleHandler>(
+                builder: (context, profileHandler, textStyleHandler, child) => Text(
+                  item.userName,
+                  style: TextStyle(
+                    fontFamily: textStyleHandler.font,
+                    fontSize: textStyleHandler.fontSize,
+                    fontWeight: FontWeight.bold,
+                    color: profileHandler.profiles[item.userName]?.color ?? NeptuneFOB.color,
+                  ),
+                ),
+              )
+            : const SizedBox(),
+      ],
+    );
     Row newRow = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Consumer<TextStyleHandler>(
-          builder: (context, textStyleHandler, child) => Text(
-            // _displayUsername() ? '${item.userName}: ' : '   ',
-            '${item.userName}: ',
-            style: TextStyle(
-              fontFamily: textStyleHandler.font,
-              fontSize: textStyleHandler.fontSize,
-            ),
-          ),
-        ),
+        repeat
+            ? Material(
+                shape: const CircleBorder(side: BorderSide(color: Colors.transparent)),
+                clipBehavior: Clip.hardEdge,
+                child: Consumer2<ProfileHandler, TextStyleHandler>(
+                  builder: (context, profileHandler, textStyleHandler, child) => Image.memory(
+                    profileHandler.profiles[item.userName]?.imageBytes ?? Uint8List(0),
+                    height: textStyleHandler.fontSize * 2,
+                    width: textStyleHandler.fontSize * 2,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(
+                        Icons.person,
+                        size: textStyleHandler.fontSize * 2,
+                      );
+                    },
+                  ),
+                ),
+              )
+            : Consumer<TextStyleHandler>(
+                builder: (context, textStyleHandler, child) => SizedBox(
+                      width: textStyleHandler.fontSize * 2,
+                    )),
+        const SizedBox(width: 15),
+        Flexible(child: newColumn)
       ],
     );
     switch (item.type) {
       case 't':
         if (_isURL(item.content) && _isImageFile(item.content)) {
-          newRow.children.add(
+          newColumn.children.add(
             ConstrainedBox(
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.5,
@@ -172,7 +211,7 @@ class ChatItemTest extends StatelessWidget {
             );
             plainText = '';
           }
-          newRow.children.add(
+          newColumn.children.add(
             Flexible(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -183,7 +222,7 @@ class ChatItemTest extends StatelessWidget {
           );
           break;
         }
-        newRow.children.add(
+        newColumn.children.add(
           Consumer<TextStyleHandler>(
             builder: (context, textStyleHandler, child) => Flexible(
               child: SelectableText.rich(_italicise(item.content, textStyleHandler.font, textStyleHandler.fontSize)),
@@ -194,7 +233,7 @@ class ChatItemTest extends StatelessWidget {
       case 'i':
         Color none = const Color.fromARGB(0, 0, 0, 0);
         final Uint8List bytes = item.content;
-        newRow.children.add(
+        newColumn.children.add(
           Flexible(
             child: ConstrainedBox(
               constraints: BoxConstraints(
@@ -218,6 +257,15 @@ class ChatItemTest extends StatelessWidget {
       default:
         break;
     }
-    return newRow;
+
+    return repeat
+        ? Padding(
+            padding: const EdgeInsets.fromLTRB(0, 30, 0, 0),
+            child: ChangeNotifierProvider<ProfileHandler>(
+              create: (context) => ProfileHandler(),
+              child: newRow,
+            ),
+          )
+        : newRow;
   }
 }

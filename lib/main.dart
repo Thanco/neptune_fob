@@ -103,10 +103,9 @@ class _MainChatState extends State<_MainChat> {
       builder: (context, child) {
         return FocusScope(
           onKeyEvent: (node, event) {
-            if (_editFocusNode.hasFocus) {
-              return KeyEventResult.ignored;
+            if (!_editFocusNode.hasFocus) {
+              _inputPanelFocusNode.children.first.requestFocus();
             }
-            _inputPanelFocusNode.children.first.requestFocus();
             return KeyEventResult.ignored;
           },
           child: Scaffold(

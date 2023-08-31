@@ -4,6 +4,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:neptune_fob/data/chat_handler.dart';
+import 'package:neptune_fob/data/profile.dart';
+import 'package:neptune_fob/data/profile_handler.dart';
 import 'package:neptune_fob/data/server_handler.dart';
 import 'package:neptune_fob/data/chat_item.dart';
 import 'package:neptune_fob/data/user_handler.dart';
@@ -156,6 +158,30 @@ class SocketHandler {
       ChatItem deleteItem = ChatItem.fromJson(json.decode(decryptedItemJson));
       ChatHandler().removeChannel(deleteItem.channel);
     });
+    _socket.on('profilesFill', (profilesJson) async {
+      String decryptedProfilesJson = await _encryptionHandler.decrypt(profilesJson.first, profilesJson.last);
+      List<dynamic> profiles = json.decode(decryptedProfilesJson);
+      List<Profile> newProfiles = [];
+      for (var profile in profiles) {
+        // var imageChat = json.decode(imageMessageJson);
+        profile['imageBytes'] = Uint8List(0);
+        String zippedImageBytesBase64 = profile['compressedImageBytes'];
+        if (zippedImageBytesBase64.isNotEmpty) {
+          Uint8List zippedImageBytes = base64.decode(zippedImageBytesBase64);
+          profile['imageBytes'] = gzip.decode(zippedImageBytes);
+        }
+
+        // List<dynamic> bytes = profile['imageBytes'];
+        // Uint8List imageBytes = Uint8List(bytes.length);/
+        // for (var i = 0; i < bytes.length; i++) {
+        //   imageBytes[i] = bytes[i];
+        // }
+        // profile['imageBytes'] = imageBytes;
+        Profile newProfile = Profile.fromJson(profile);
+        newProfiles.add(newProfile);
+      }
+      ProfileHandler().addProfiles(newProfiles);
+    });
   }
 
   void _sendChatMessage(String event, ChatItem item) {
@@ -251,5 +277,20 @@ class SocketHandler {
 
   void removeChannel(String channel) {
     _sendChatMessage('removeChannel', ChatItem(-1, userName, channel, 'd', ''));
+  }
+
+  void addProfile(Profile newProfile) {
+    final gZipImg = gzip.encode(newProfile.imageBytes);
+    newProfile.compressedImageBytes = base64.encode(gZipImg);
+    Uint8List bytes = newProfile.imageBytes;
+    newProfile.imageBytes = Uint8List(0);
+
+    _send('addProfile', newProfile.toJson().toString());
+    newProfile.compressedImageBytes = null;
+    newProfile.imageBytes = bytes;
+  }
+
+  void removeProfile(String profileName) {
+    _send('removeProfile', profileName);
   }
 }

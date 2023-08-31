@@ -34,39 +34,10 @@ class ChatList extends StatelessWidget {
         child: Consumer<ChatHandler>(
           builder: (context, chatHandler, child) {
             final List<ChatItem> currentList = chatHandler.getMessages('');
-            // int chatLength = currentList.length;
-            //
-            // return ListView.separated(
-            //   clipBehavior: Clip.none,
-            //   // reverse: true,
-            //   controller: controller,
-            //   // padding: const EdgeInsets.symmetric(),
-            //   shrinkWrap: true,
-            //   itemCount: chatLength,
-            //   itemBuilder: ((context, index) {
-            //     // final int correctedIndex = chatLength - (index + 1);
-            //     int correctedIndex = index;
-            //     ChatItem item = currentList[correctedIndex];
-            //     if (item.itemIndex == ChatHandler().editIndex) {
-            //       return EditingChat(item);
-            //     }
-            //     return DisplayChat(
-            //       item,
-            //       // key: ValueKey<ChatItem>(item),
-            //     );
-            //   }),
-            //   // findChildIndexCallback: (Key key) {
-            //   //   ValueKey<ChatItem> valueKey = key as ValueKey<ChatItem>;
-            //   //   int index = currentList.indexWhere((element) => element.itemIndex == valueKey.value.itemIndex);
-            //   //   if (index == -1) return null;
-            //   //   return;
-            //   // },
-            //   separatorBuilder: (context, index) => const Divider(),
-            // );
 
             final List<Widget> list = [];
             for (ChatItem item in currentList) {
-              list.add(const Divider());
+              // list.add(const Divider());
               if (item.itemIndex == ChatHandler().editIndex) {
                 list.add(EditingChat(item));
                 continue;
