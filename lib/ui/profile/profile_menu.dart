@@ -1,7 +1,6 @@
 // Copyright Terry Hancock 2023
 
 import 'package:flutter/material.dart';
-import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/profile_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
 import 'package:neptune_fob/main.dart';
@@ -27,6 +26,7 @@ class _ProfileMenuState extends State<ProfileMenu> {
           child: GestureDetector(
             onTap: () {
               SocketHandler().setUsername(profile.userName);
+              Navigator.of(context).pop();
               Navigator.of(context).pop();
             },
             onSecondaryTap: () => showDialog(

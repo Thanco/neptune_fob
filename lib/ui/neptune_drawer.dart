@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/new_client_calls.dart';
+import 'package:neptune_fob/data/profile.dart';
 import 'package:neptune_fob/data/profile_handler.dart';
 import 'package:neptune_fob/data/server_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
@@ -128,37 +129,39 @@ class _NeptuneDrawerState extends State<NeptuneDrawer> {
               const SizedBox(
                 height: 15,
               ),
-              // Consumer<TextStyleHandler>(
-              //   builder: (context, textStyleHandler, child) => Row(
-              //     children: [
-              //       Text(
-              //         'Username: ${SocketHandler().userName}  ',
-              //         style: TextStyle(
-              //           fontFamily: textStyleHandler.font,
-              //           fontSize: 22,
-              //         ),
-              //       ),
-              //       const Spacer(),
-              //       MaterialButton(
-              //         onPressed: () => NewClientCalls().changeUserName(context),
-              //         minWidth: 25,
-              //         color: NeptuneFOB.color,
-              //         hoverColor: Colors.amber,
-              //         child: Text(
-              //           'Change',
-              //           style: TextStyle(
-              //             fontFamily: textStyleHandler.font,
-              //             fontSize: 22,
-              //           ),
-              //         ),
-              //       ),
-              //     ],
-              //   ),
-              // ),
+              Consumer<TextStyleHandler>(
+                builder: (context, textStyleHandler, child) => Row(
+                  children: [
+                    Text(
+                      'Username: ${SocketHandler().userName}  ',
+                      style: TextStyle(
+                        fontFamily: textStyleHandler.font,
+                        fontSize: 22,
+                      ),
+                    ),
+                    const Spacer(),
+                    MaterialButton(
+                      onPressed: () => NewClientCalls().changeUserName(context),
+                      minWidth: 25,
+                      color: NeptuneFOB.color,
+                      hoverColor: Colors.amber,
+                      child: Text(
+                        'Change',
+                        style: TextStyle(
+                          fontFamily: textStyleHandler.font,
+                          fontSize: 22,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               SizedBox(
                 height: 120,
                 width: 100,
-                child: ProfileCard(profile: ProfileHandler().profiles[SocketHandler().userName]!),
+                child: ProfileCard(
+                    profile:
+                        ProfileHandler().profiles[SocketHandler().userName] ?? Profile.blank(SocketHandler().userName)),
               ),
               const SizedBox(height: 10),
               Center(
