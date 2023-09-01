@@ -8,6 +8,7 @@ import 'package:neptune_fob/data/profile.dart';
 import 'package:neptune_fob/data/profile_handler.dart';
 import 'package:neptune_fob/data/server_handler.dart';
 import 'package:neptune_fob/data/chat_item.dart';
+import 'package:neptune_fob/data/settings_handler.dart';
 import 'package:neptune_fob/data/user_handler.dart';
 import 'package:neptune_fob/security/encryption_handler.dart';
 import 'package:neptune_fob/ui/typing_status.dart';
@@ -122,7 +123,11 @@ class SocketHandler {
     });
     _socket.on('usernameSend', (clientUserName) async {
       String decryptedClientUserName = await _encryptionHandler.decrypt(clientUserName.first, clientUserName.last);
+      bool save = (userName != decryptedClientUserName);
       userName = decryptedClientUserName;
+      if (save) {
+        SettingsHandler().saveSettings();
+      }
       ServerHandler().addServer();
     });
     _socket.on('userListSend', (userList) async {
