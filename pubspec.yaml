@@ -3,7 +3,7 @@ description: The front end client for Project Neptune.
 
 publish_to: 'none'
 
-version: 0.12.4+1
+version: 0.12.4+2
 
 environment:
   sdk: '>=2.18.5'
@@ -65,4 +65,3 @@ flutter:
   
   assets:
       - assets/message.mp3
-      - assets/message2.mp3
