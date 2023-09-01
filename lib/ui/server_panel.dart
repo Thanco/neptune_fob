@@ -1,13 +1,14 @@
 // Copyright Terry Hancock 2023
 import 'package:flutter/material.dart';
-import 'package:neptune_fob/rtc/rtc_panel.dart';
+// import 'package:neptune_fob/rtc/rtc_panel.dart';
 import 'package:neptune_fob/ui/server_list.dart';
 import 'package:neptune_fob/data/text_style_handler.dart';
 import 'package:provider/provider.dart';
 
 class ServerPanel extends StatelessWidget {
-  const ServerPanel(this._rtcPanel, {super.key});
-  final RTCPanel _rtcPanel;
+  // const ServerPanel(this._rtcPanel, {super.key});
+  const ServerPanel({super.key});
+  // final RTCPanel _rtcPanel;
 
   @override
   Widget build(BuildContext context) {
@@ -41,9 +42,9 @@ class ServerPanel extends StatelessWidget {
                 child: ServerList(),
               ),
             ),
-            Center(
-              child: _rtcPanel,
-            ),
+            // Center(
+            //   child: _rtcPanel,
+            // ),
           ],
         ),
       ),

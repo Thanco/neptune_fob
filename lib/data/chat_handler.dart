@@ -1,5 +1,6 @@
 // Copyright Terry Hancock 2023
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
 import 'package:neptune_fob/data/chat_item.dart';
@@ -12,6 +13,7 @@ class ChatHandler with ChangeNotifier {
   String _currentChannel = 'Default';
   final ScrollController controller = ScrollController();
   int _editIndex = -27;
+  DeviceFileSource? notificationSound;
 
   ChatHandler._constructor();
 
@@ -129,7 +131,7 @@ class ChatHandler with ChangeNotifier {
 
   List<ChatItem> getMessages(String channel) {
     if (channel == '') {
-      return _messageLists[_currentChannel]!;
+      return _messageLists[_currentChannel] ?? [];
     }
     if (_messageLists.isNotEmpty && _messageLists[channel] != null) {
       return _messageLists[channel]!;

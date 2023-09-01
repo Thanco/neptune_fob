@@ -10,7 +10,6 @@ import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/settings_handler.dart';
 import 'package:neptune_fob/data/text_style_handler.dart';
 import 'package:neptune_fob/data/user_handler.dart';
-import 'package:neptune_fob/rtc/rtc_panel.dart';
 
 import 'package:neptune_fob/ui/chat_list.dart';
 import 'package:neptune_fob/ui/input_field.dart';
@@ -84,7 +83,8 @@ class _MainChatState extends State<_MainChat> {
   );
   late final Flexible _serverPanel = const Flexible(
     flex: 4,
-    child: ServerPanel(RTCPanel()),
+    // child: ServerPanel(RTCPanel()),
+    child: ServerPanel(),
   );
 
   @override

@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/profile.dart';
 import 'package:neptune_fob/data/profile_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
@@ -54,7 +53,6 @@ class _ProfileCreationState extends State<ProfileCreation> {
   }
 
   void _addProfile(TextEditingController controller) {
-    // TODO add profile
     Profile newProfile = Profile(controller.text, _imageBytes!, color);
     SocketHandler().addProfile(newProfile);
     ProfileHandler().addProfiles([newProfile]);

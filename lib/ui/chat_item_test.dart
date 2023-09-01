@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/chat_handler.dart';
-import 'package:neptune_fob/data/profile.dart';
 import 'package:neptune_fob/data/profile_handler.dart';
 import 'package:neptune_fob/data/text_style_handler.dart';
 import 'package:neptune_fob/data/chat_item.dart';
@@ -258,14 +257,6 @@ class ChatItemTest extends StatelessWidget {
         break;
     }
 
-    return repeat
-        ? Padding(
-            padding: const EdgeInsets.fromLTRB(0, 30, 0, 0),
-            child: ChangeNotifierProvider<ProfileHandler>(
-              create: (context) => ProfileHandler(),
-              child: newRow,
-            ),
-          )
-        : newRow;
+    return repeat ? Padding(padding: const EdgeInsets.fromLTRB(0, 30, 0, 0), child: newRow) : newRow;
   }
 }

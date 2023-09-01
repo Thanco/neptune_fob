@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/chat_handler.dart';
+import 'package:neptune_fob/data/profile_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
 import 'package:neptune_fob/data/chat_item.dart';
 import 'package:neptune_fob/ui/display_chat_item.dart';
@@ -45,13 +46,16 @@ class ChatList extends StatelessWidget {
               list.add(DisplayChat(item));
             }
 
-            return SingleChildScrollView(
-              controller: controller,
-              reverse: true,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: list,
+            return ChangeNotifierProvider<ProfileHandler>(
+              create: (context) => ProfileHandler(),
+              child: SingleChildScrollView(
+                controller: controller,
+                reverse: true,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: list,
+                ),
               ),
             );
           },

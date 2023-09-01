@@ -1,4 +1,5 @@
 // Copyright Terry Hancock 2023
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:neptune_fob/data/chat_handler.dart';
 import 'package:neptune_fob/data/new_client_calls.dart';
@@ -8,6 +9,7 @@ import 'package:neptune_fob/data/server_handler.dart';
 import 'package:neptune_fob/data/socket_handler.dart';
 import 'package:neptune_fob/data/text_style_handler.dart';
 import 'package:neptune_fob/main.dart';
+import 'package:neptune_fob/ui/input_prompt.dart';
 import 'package:neptune_fob/ui/profile/profile_card.dart';
 import 'package:neptune_fob/ui/profile/profile_menu.dart';
 import 'package:provider/provider.dart';
@@ -210,7 +212,7 @@ class _NeptuneDrawerState extends State<NeptuneDrawer> {
                 ],
               ),
               const SizedBox(
-                height: 25,
+                height: 10,
               ),
               Center(
                 child: MaterialButton(
@@ -228,6 +230,55 @@ class _NeptuneDrawerState extends State<NeptuneDrawer> {
                     ),
                   ),
                 ),
+              ),
+              const SizedBox(
+                height: 20,
+              ),
+              Text(
+                'Notification Sound:  ${(ChatHandler().notificationSound == null) ? 'Default' : 'Custom'}',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontFamily: TextStyleHandler().font,
+                ),
+              ),
+              Row(
+                children: [
+                  MaterialButton(
+                    color: NeptuneFOB.color,
+                    hoverColor: Colors.amber,
+                    onPressed: () => showDialog(
+                        context: context,
+                        builder: (context) {
+                          final controller = TextEditingController();
+                          return InputPrompt(
+                              controller: controller,
+                              formTitle: 'the file location for notification sound file',
+                              onSubmit: () {
+                                if (controller.text.isEmpty ||
+                                    !(controller.text.endsWith('.wav') || controller.text.endsWith('.mp3'))) {
+                                  Navigator.of(context).pop();
+                                  return;
+                                }
+                                controller.text = controller.text.replaceAll("\\", "/");
+                                final source = DeviceFileSource(controller.text);
+                                ChatHandler().notificationSound = source;
+                                Navigator.of(context).pop();
+                                setState(() {});
+                              });
+                        }),
+                    child: const Text('Add custom sound'),
+                  ),
+                  const Spacer(),
+                  MaterialButton(
+                    color: NeptuneFOB.color,
+                    hoverColor: Colors.amber,
+                    onPressed: () {
+                      ChatHandler().notificationSound = null;
+                      setState(() {});
+                    },
+                    child: const Text('Reset to default'),
+                  )
+                ],
               ),
             ],
           ),
