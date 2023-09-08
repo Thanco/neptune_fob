@@ -88,14 +88,12 @@ class SocketHandler {
       _currentlyRequesting = false;
     });
     _socket.on('image', (imageMessage) async {
-      String decryptedImageMessage = await _encryptionHandler.decrypt(imageMessage);
-      // var items = json.decode(decryptedImageMessage);
+      String decryptedImageMessage = await _encryptionHandler.decrypt(imageMessage.first);
       Map<String, dynamic> itemJson = json.decode(decryptedImageMessage);
       String zippedImageBytesBase64 = itemJson['content'];
 
       Uint8List zippedImageBytes = base64.decode(zippedImageBytesBase64);
       itemJson['content'] = gzip.decode(zippedImageBytes);
-      // itemJson['content'] = Uint8List(imageBytes.length)..setRange(0, imageBytes.length, imageBytes.cast<int>());
 
       ChatItem newImage = ChatItem.fromJson(itemJson);
       ChatHandler().addNewChatItem(newImage);
