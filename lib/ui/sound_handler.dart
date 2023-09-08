@@ -8,7 +8,7 @@ class SoundHandler {
 
   static void play() {
     audio.play(
-      ChatHandler().notificationSound ?? AssetSource('assets/message.mp3'),
+      ChatHandler().notificationSound ?? AssetSource('message.mp3'),
       volume: .25,
       mode: PlayerMode.lowLatency,
     );

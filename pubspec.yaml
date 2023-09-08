@@ -3,7 +3,7 @@ description: The front end client for Project Neptune.
 
 publish_to: 'none'
 
-version: 0.12.4+2
+version: 0.12.5+0
 
 environment:
   sdk: '>=2.18.5'

@@ -20,6 +20,6 @@ class EncryptionHandler {
     _aesHandler!.storeAESKey(sessionKey);
   }
 
-  Future<List<String>> encrypt(String content) => _aesHandler!.encryptData(content);
-  Future<String> decrypt(String content, String bit16) => _aesHandler!.decryptData(content, bit16);
+  Future<String> encrypt(String content) => _aesHandler!.encryptData(content);
+  Future<String> decrypt(String content) => _aesHandler!.decryptData(content);
 }
