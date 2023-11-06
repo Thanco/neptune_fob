@@ -133,6 +133,12 @@ class _InputFieldState extends State<InputField> {
                             fontFamily: textStyleHandler.font,
                             fontSize: textStyleHandler.fontSize,
                           ),
+                          spellCheckConfiguration: SpellCheckConfiguration(
+                            spellCheckService: DefaultSpellCheckService(),
+                            misspelledTextStyle: const TextStyle(
+                              color: Colors.lightBlue,
+                            ),
+                          ),
                           controller: _controller,
                           onSubmitted: (message) {
                             _testMessage();

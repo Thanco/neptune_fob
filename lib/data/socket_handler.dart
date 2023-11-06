@@ -219,7 +219,7 @@ class SocketHandler {
     if (deleteItem == null) {
       return;
     }
-    _sendChatMessage('delete', deleteItem);
+    _sendChatMessage('delete', ChatItem(editIndex, deleteItem.userName, messages.getCurrentChannel(), 'd', ''));
   }
 
   void changeServer(String serverURL) {

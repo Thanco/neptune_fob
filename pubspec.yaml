@@ -3,7 +3,7 @@ description: The front end client for Project Neptune.
 
 publish_to: 'none'
 
-version: 0.12.5+1
+version: 0.12.6+1
 
 environment:
   sdk: '>=2.18.5'
@@ -17,7 +17,7 @@ dependencies:
   provider: ^6.0.5
 
   biometric_storage: ^5.0.0
-  
+
   image_picker: ^0.8.6+1
   pasteboard: ^0.2.0
   path_provider: ^2.0.3
@@ -34,6 +34,8 @@ dependencies:
   flutter_slidable: ^3.0.0
 
   flutter_colorpicker: ^1.0.3
+
+  ogp_data_extract: ^0.1.2
 
 dev_dependencies:
   flutter_test:

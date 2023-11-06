@@ -8,6 +8,7 @@ import 'package:neptune_fob/data/text_style_handler.dart';
 import 'package:neptune_fob/data/chat_item.dart';
 import 'package:neptune_fob/main.dart';
 import 'package:neptune_fob/ui/image_view.dart';
+import 'package:neptune_fob/ui/ogp_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -104,7 +105,7 @@ class ChatItemTest extends StatelessWidget {
                     fontFamily: textStyleHandler.font,
                     fontSize: textStyleHandler.fontSize,
                     fontWeight: FontWeight.bold,
-                    color: profileHandler.profiles[item.userName]?.color ?? NeptuneFOB.color,
+                    color: profileHandler.getProfile(item.userName)?.color ?? NeptuneFOB.color,
                   ),
                 ),
               )
@@ -120,7 +121,7 @@ class ChatItemTest extends StatelessWidget {
                 clipBehavior: Clip.hardEdge,
                 child: Consumer2<ProfileHandler, TextStyleHandler>(
                   builder: (context, profileHandler, textStyleHandler, child) => Image.memory(
-                    profileHandler.profiles[item.userName]?.imageBytes ?? Uint8List(0),
+                    profileHandler.getProfile(item.userName)?.imageBytes ?? Uint8List(0),
                     height: textStyleHandler.fontSize * 2,
                     width: textStyleHandler.fontSize * 2,
                     errorBuilder: (context, error, stackTrace) {
@@ -196,6 +197,7 @@ class ChatItemTest extends StatelessWidget {
                   ),
                 ),
               );
+              newWidgets.add(OgpDisplay(url: split[i]));
             } else {
               plainText += '${split[i]} ';
             }

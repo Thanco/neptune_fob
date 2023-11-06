@@ -26,7 +26,7 @@ class ProfileCard extends StatelessWidget {
           ),
         ),
         Text(
-          profile.userName,
+          profile.userName.split("/").last,
           style: TextStyle(
             // fontSize: 12,
             fontFamily: TextStyleHandler().font,

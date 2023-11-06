@@ -52,7 +52,7 @@ class NewClientCalls {
                 SettingsHandler().saveSettings();
                 break;
               case 'Server Address':
-                if (!controller.text.startsWith('http://')) {
+                if (!controller.text.startsWith('http:')) {
                   controller.text = 'http://${controller.text}/';
                 }
                 final SocketHandler socket = SocketHandler();

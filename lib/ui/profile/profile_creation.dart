@@ -64,7 +64,7 @@ class _ProfileCreationState extends State<ProfileCreation> {
   @override
   Widget build(BuildContext context) {
     if (!init) {
-      Profile baseProfile = ProfileHandler().profiles[widget.baseProfile] ?? Profile.blank('');
+      Profile baseProfile = ProfileHandler().getProfile(widget.baseProfile) ?? Profile.blank('');
       controller.text = baseProfile.userName;
       _imageBytes = baseProfile.imageBytes;
       color = baseProfile.color;

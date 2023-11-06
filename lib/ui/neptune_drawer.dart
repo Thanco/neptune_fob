@@ -162,8 +162,8 @@ class _NeptuneDrawerState extends State<NeptuneDrawer> {
                 height: 120,
                 width: 100,
                 child: ProfileCard(
-                    profile:
-                        ProfileHandler().profiles[SocketHandler().userName] ?? Profile.blank(SocketHandler().userName)),
+                    profile: ProfileHandler().getProfile(SocketHandler().userName) ??
+                        Profile.blank(SocketHandler().userName)),
               ),
               const SizedBox(height: 10),
               Center(
@@ -172,7 +172,7 @@ class _NeptuneDrawerState extends State<NeptuneDrawer> {
                     showDialog(
                         context: context,
                         builder: (context) {
-                          return const ProfileMenu();
+                          return ProfileMenu(profiles: ProfileHandler().sortedProfiles);
                         });
                   },
                   minWidth: 25,
